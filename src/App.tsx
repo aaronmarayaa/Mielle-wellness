@@ -12,6 +12,7 @@ import { AboutPage } from './components/AboutPage'
 import { ServicesPage } from './components/ServicesPage'
 import { ServicesNav } from './components/ServicesNav'
 import { SkinTreatmentPage } from './components/SkinTreatmentPage'
+import { DirectBillingPage } from './components/DirectBillingPage'
 
 const SITE = 'https://www.miellewellness.ca'
 const BOOKING = 'https://miellewellness.noterro.com/'
@@ -27,7 +28,7 @@ const insurers = [
   ['12.png', 'People Corporation'], ['13.png', 'Maximum Benefit'], ['14.png', 'First Canadian Financial Group'],
   ['15.png', 'D.A. Townley'], ['16.webp', 'GroupSource'], ['17.png', 'Cowan'],
   ['18.png', 'Chambers of Commerce Group Insurance Plan'], ['19.png', 'Coughlin'], ['20.png', 'Canadian Construction Workers Union'],
-  ['21.jpg', 'BPA'], ['22.png', 'Johnston Group'], ['23.png', 'Beneva'],
+  ['21.jpg', 'BPA'], ['22.png', 'Johnston Group'], ['23.png', 'Beneva'], ['24.png', 'Johnson'],
   ['pbas.png', 'The PBAS Group'], ['manitoba.svg', 'Manitoba Blue Cross'],
   ['ssq.gif', 'SSQ Insurance'], ['empire.png', 'Empire Life'], ['gsc.png', 'Green Shield Canada'],
   ['desjardins.svg', 'Desjardins'], ['claimsecure.png', 'ClaimSecure'],
@@ -72,7 +73,8 @@ function App() {
   const isInClinicPage = currentPath === '/in-clinic'
   const isMobileServicePage = currentPath === '/mobile-service'
   const isSkinTreatmentPage = currentPath === '/skin-treatment'
-  const isInnerPage = isAboutPage || isServicesPage || isInClinicPage || isMobileServicePage || isSkinTreatmentPage
+  const isDirectBillingPage = currentPath === '/direct-billing'
+  const isInnerPage = isAboutPage || isServicesPage || isInClinicPage || isMobileServicePage || isSkinTreatmentPage || isDirectBillingPage
   useBotanicalFade()
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
@@ -91,8 +93,8 @@ function App() {
   const bookingOrigin = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    document.title = isAboutPage ? 'About | Mielle Wellness' : isInClinicPage ? 'In-Clinic Services | Mielle Wellness' : isMobileServicePage ? 'Mobile Services | Mielle Wellness' : isSkinTreatmentPage ? 'Skin Treatment | Mielle Wellness' : isServicesPage ? 'Services | Mielle Wellness' : 'Mielle Wellness | Enhance Wellness, Embrace Life'
-  }, [isAboutPage, isServicesPage, isInClinicPage, isMobileServicePage, isSkinTreatmentPage])
+    document.title = isAboutPage ? 'About | Mielle Wellness' : isInClinicPage ? 'In-Clinic Services | Mielle Wellness' : isMobileServicePage ? 'Mobile Services | Mielle Wellness' : isSkinTreatmentPage ? 'Skin Treatment | Mielle Wellness' : isDirectBillingPage ? 'Direct Billing | Mielle Wellness' : isServicesPage ? 'Services | Mielle Wellness' : 'Mielle Wellness | Enhance Wellness, Embrace Life'
+  }, [isAboutPage, isServicesPage, isInClinicPage, isMobileServicePage, isSkinTreatmentPage, isDirectBillingPage])
 
   useEffect(() => {
     const sections = [...document.querySelectorAll<HTMLElement>('main [data-nav]')]
@@ -184,12 +186,12 @@ function App() {
   }
 
   const homeHref = (section: string) => isInnerPage ? `/#${section}` : `#${section}`
-  const contactHref = isSkinTreatmentPage ? '/#contact' : '#contact'
+  const contactHref = isDirectBillingPage ? '#contact' : isInnerPage ? '/#contact' : '#contact'
   const nav = <>
     <a href={homeHref('home')} aria-current={!isInnerPage && activeSection === 'home' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>HOME</a>
     <a href="/about" aria-current={isAboutPage ? 'page' : undefined} onClick={() => setMenuOpen(false)}>ABOUT</a>
     <ServicesNav currentPath={currentPath} onNavigate={() => setMenuOpen(false)} />
-    <a href={homeHref('direct-billing')} aria-current={!isInnerPage && activeSection === 'direct-billing' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>DIRECT BILLING</a>
+    <a href="/direct-billing" aria-current={isDirectBillingPage ? 'page' : undefined} onClick={() => setMenuOpen(false)}>DIRECT BILLING</a>
     <button onClick={() => { setMenuOpen(false); setOfferOpen(true) }}>PROMOS</button>
     <a href={`${SITE}/careers`} onClick={() => setMenuOpen(false)}>CAREERS</a>
     <a href={contactHref} aria-current={!isInnerPage && activeSection === 'contact' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>CONTACT</a>
@@ -210,7 +212,7 @@ function App() {
       </header>
 
       <main id="main" className={isInnerPage ? `inner-page ${isAboutPage ? 'about-page' : 'services-page'}` : undefined} tabIndex={-1} inert={menuOpen}>
-        {isAboutPage ? <AboutPage /> : isSkinTreatmentPage ? <SkinTreatmentPage /> : isServicesPage || isInClinicPage || isMobileServicePage ? <ServicesPage onBook={openBooking} variant={isInClinicPage ? 'in-clinic' : isMobileServicePage ? 'mobile' : 'overview'} /> : <>
+        {isAboutPage ? <AboutPage /> : isSkinTreatmentPage ? <SkinTreatmentPage /> : isDirectBillingPage ? <DirectBillingPage insurers={insurers} /> : isServicesPage || isInClinicPage || isMobileServicePage ? <ServicesPage onBook={openBooking} variant={isInClinicPage ? 'in-clinic' : isMobileServicePage ? 'mobile' : 'overview'} /> : <>
         <div id="home" className="home-cover" data-nav>
           <section className="hero">
             <HeroBackground />
@@ -258,7 +260,7 @@ function App() {
         </section>
 
         <section id="direct-billing" className="billing-section" data-nav>
-          <div className="section-intro" data-reveal><div><p className="eyebrow">THE PRACTICAL DETAILS</p><h2>Less paperwork.<br />More time for you.</h2></div><div className="billing-copy"><p>We offer direct billing for eligible insurance plans. Ask us about your coverage before your visit.</p><TextLink onClick={() => setInsuranceOpen(true)}>See All</TextLink></div></div>
+          <div className="section-intro" data-reveal><div><p className="eyebrow">THE PRACTICAL DETAILS</p><h2>Less paperwork.<br />More time for you.</h2></div><div className="billing-copy"><p>We offer direct billing for eligible insurance plans. Ask us about your coverage before your visit.</p><TextLink href="/direct-billing">See All</TextLink></div></div>
           <div className="insurance-carousel" role="region" aria-label="Direct Billing">
             <div className="insurance-track">
               {[0, 1].map(copy => <div className="insurance-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>
