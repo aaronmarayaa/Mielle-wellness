@@ -8,18 +8,25 @@ const photographs = [
 ]
 
 export function RenewalSection() {
+  const section = useRef<HTMLElement>(null)
+  const scrollArea = useRef<HTMLDivElement>(null)
   const gallery = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const element = gallery.current
-    if (!element) return
+    const area = scrollArea.current
+    const container = section.current
+    if (!element || !area || !container) return
     const photographs = [...element.querySelectorAll<HTMLElement>('.renewal-photo')]
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
     let frame = 0
 
     const update = () => {
       frame = 0
-      const progress = (window.innerHeight * .65 - element.getBoundingClientRect().top) / (window.innerHeight * .7)
+      const headerHeight = document.querySelector<HTMLElement>('.site-header')?.offsetHeight || 0
+      const bounds = area.getBoundingClientRect()
+      const scrollDistance = Math.max(1, bounds.height - element.getBoundingClientRect().height - 80)
+      const progress = (headerHeight + 16 - bounds.top) / scrollDistance
       const rightProgress = progress * 2.5
       const positions = [rightProgress / 2 - .25, rightProgress / 2, rightProgress]
       photographs.forEach((photograph, index) => {
@@ -30,6 +37,7 @@ export function RenewalSection() {
     const schedule = () => { if (!frame) frame = window.requestAnimationFrame(update) }
     const configure = () => {
       window.removeEventListener('scroll', schedule)
+      container.classList.toggle('renewal-scroll-ready', !preference.matches)
       if (!preference.matches) window.addEventListener('scroll', schedule, { passive: true })
       schedule()
     }
@@ -41,19 +49,22 @@ export function RenewalSection() {
       window.removeEventListener('scroll', schedule)
       window.removeEventListener('resize', schedule)
       preference.removeEventListener('change', configure)
+      container.classList.remove('renewal-scroll-ready')
     }
   }, [])
 
-  return <section className="renewal-section" aria-labelledby="renewal-title">
+  return <section className="renewal-section" ref={section} aria-labelledby="renewal-title">
     <div className="renewal-copy">
       <p className="renewal-label">Mielle Wellness</p>
       <h2 id="renewal-title">Immerse yourself in the art of renewal with Mielle Wellness. Experience radiant skin, restorative massage, and professional wellness treatments brought together in perfect harmony.</h2>
       <a className="text-link" href="#services">See Services <ArrowRight size={23} strokeWidth={1.2} aria-hidden="true" /></a>
     </div>
-    <div className="renewal-gallery" ref={gallery}>
-      {photographs.map(photograph => <figure className="renewal-photo" key={photograph.file}>
-        <img src={`/assets/${photograph.file}`} alt={photograph.alt} loading="lazy" />
-      </figure>)}
+    <div className="renewal-scroll" ref={scrollArea}>
+      <div className="renewal-gallery" ref={gallery}>
+        {photographs.map(photograph => <figure className="renewal-photo" key={photograph.file}>
+          <img src={`/assets/${photograph.file}`} alt={photograph.alt} loading="lazy" />
+        </figure>)}
+      </div>
     </div>
   </section>
 }

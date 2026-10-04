@@ -43,7 +43,13 @@ try {
   }
   for (const [label, id] of [['HOME', 'home'], ['ABOUT', 'about'], ['SERVICES', 'services'], ['DIRECT BILLING', 'direct-billing'], ['CONTACT', 'contact']]) {
     await page.locator('.desktop-nav').getByRole('link', { name: label, exact: true }).click()
-    assert.equal(new URL(page.url()).hash, `#${id}`)
+    if (id === 'about') {
+      await page.waitForURL('**/about')
+      await expect(page.getByRole('heading', { level: 1 })).toContainText('Professional wellness, massage and skin treatments')
+    } else {
+      await page.waitForURL(`**/#${id}`)
+      assert.equal(new URL(page.url()).hash, `#${id}`)
+    }
   }
   const triggers = page.locator('button').filter({ hasText: /^\s*(BOOK APPOINTMENT|Book In-Clinic|Book Mobile|Skin Treatment|Book your appointment now|Book now|Booking)\s*$/ })
   let bookingChecks = 0
@@ -118,15 +124,16 @@ try {
       }
     }, true)
   })
-  for (const selector of ['.desktop-nav a[href^="https"]', '.about-content a', '.contact-info a', '.site-footer a:not([href^="#"])']) {
+  assert.equal(await page.locator('.about-content a').getAttribute('href'), '/about')
+  for (const selector of ['.desktop-nav a[href^="https"]', '.contact-info a', '.site-footer a:not([href^="#"])']) {
     for (const link of await page.locator(selector).all()) await link.click()
   }
   await page.locator('.header-booking').click()
   for (const link of await page.getByRole('dialog').getByRole('link').all()) await link.click()
   await page.keyboard.press('Escape')
   const externalClicks = await page.evaluate(() => window.checkedLinks)
-  assert.equal(externalClicks.length, 14)
-  evidence.push('Careers, About, contact phone, address, map, Facebook, footer contact/credit, three booking destinations, and booking phone links respond; outgoing navigation intercepted during testing')
+  assert.equal(externalClicks.length, 13)
+  evidence.push('About resolves to the new local page; Careers, contact phone, address, map, Facebook, footer contact/credit, three booking destinations, and booking phone links respond; outgoing navigation intercepted during testing')
   await page.setViewportSize({ width: 375, height: 812 })
   const menu = page.getByRole('button', { name: 'Menu', exact: true })
   await menu.click()

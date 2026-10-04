@@ -15,8 +15,9 @@ const positions = () => photos.evaluateAll(elements => elements.map(el => {
   return { progress: Number(style.getPropertyValue('--image-progress')), y: new DOMMatrixReadOnly(style.transform).m42, rise: parseFloat(style.getPropertyValue('--image-rise')) }
 }))
 const scrollProgress = async progress => {
-  await page.locator('.renewal-gallery').evaluate(async (el, progress) => {
-    const top = scrollY + el.getBoundingClientRect().top - innerHeight * (.65 - .7 * progress)
+  await page.locator('.renewal-scroll').evaluate(async (el, progress) => {
+    const headerHeight = document.querySelector('.site-header').offsetHeight
+    const top = scrollY + el.getBoundingClientRect().top - headerHeight - 16 + innerHeight * .75 * progress
     scrollTo({ top, behavior: 'instant' })
     await new Promise(requestAnimationFrame)
     await new Promise(requestAnimationFrame)
@@ -52,8 +53,19 @@ try {
         assert.ok(Math.abs(photo.progress - expected) < .02, JSON.stringify({ width, progress, state }))
         assert.ok(Math.abs(photo.y - photo.rise * (1 - expected)) < 2)
       })
+      const pinnedTop = await page.locator('.renewal-gallery').evaluate(el => el.getBoundingClientRect().top)
+      const pinTarget = await page.locator('.site-header').evaluate(el => el.offsetHeight + 16)
+      assert.ok(Math.abs(pinnedTop - pinTarget) < 1, JSON.stringify({ width, progress, pinnedTop, pinTarget }))
     }
     const bounds = await photos.evaluateAll(elements => elements.map(el => el.getBoundingClientRect().toJSON()))
+    const finalGalleryTop = await page.locator('.renewal-gallery').evaluate(el => el.getBoundingClientRect().top)
+    const headerBottom = await page.locator('.site-header').evaluate(el => el.getBoundingClientRect().bottom)
+    assert.ok(finalGalleryTop > headerBottom, 'All images must finish before the gallery reaches the header')
+    await scrollProgress(1.05)
+    assert.ok(Math.abs(await page.locator('.renewal-gallery').evaluate(el => el.getBoundingClientRect().top) - finalGalleryTop) < 1, 'Gallery must hold its completed position briefly')
+    await scrollProgress(1.4)
+    assert.ok(await page.locator('.renewal-gallery').evaluate(el => el.getBoundingClientRect().top) < finalGalleryTop - 20, 'Gallery must release after all images finish')
+    assert.ok((await positions()).every(photo => photo.progress === 1))
     assert.ok(bounds.every(rect => rect.x >= 0 && rect.right <= width), 'Photos leave page bounds')
     if (width >= 620) assert.ok(bounds[0].top > bounds[1].top && bounds[1].top > bounds[2].top)
     else assert.ok(bounds[2].top >= bounds[1].bottom)
@@ -77,12 +89,17 @@ try {
       })
     })
     assert.ok(contrast.every(ratio => ratio >= 4.5))
-    if ([375, 768, 1440].includes(width)) await section.screenshot({ path: `test-results/renewal-${width}.png` })
-    evidence.push(`${width}px: right-to-left overlapping rise matches 50/25/0, 100/50/25, 100/75/50, 100/100/75, and 100/100/100; reverse motion, no timer/overflow/collision, exact supplied text, loaded images, and ${Math.min(...contrast).toFixed(2)}:1 text contrast`)
+    if ([375, 768, 1440].includes(width)) {
+      await scrollProgress(1)
+      await page.screenshot({ path: `test-results/renewal-pinned-${width}.png` })
+    }
+    evidence.push(`${width}px: gallery stays pinned throughout 50/25/0, 100/50/25, 100/75/50, 100/100/75, and 100/100/100; completed frame holds, then releases; reverse motion, no timer/overflow/collision, exact copy, loaded images, and ${Math.min(...contrast).toFixed(2)}:1 text contrast`)
   }
 
   const services = page.getByRole('link', { name: 'See Services', exact: true })
+  await services.scrollIntoViewIfNeeded()
   await services.focus()
+  await expect(services).toBeFocused()
   assert.notEqual(await services.evaluate(el => getComputedStyle(el).outlineStyle), 'none')
   await page.keyboard.press('Enter')
   await expect(page.locator('.desktop-nav a[href="#services"]')).toHaveAttribute('aria-current', 'location')
@@ -91,6 +108,8 @@ try {
 
   await scrollProgress(.4)
   await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(page.locator('.renewal-section')).not.toHaveClass(/renewal-scroll-ready/)
+  await expect(page.locator('.renewal-gallery')).toHaveCSS('position', 'relative')
   await expect(photos.first()).toHaveCSS('transform', 'none')
   assert.ok((await positions()).every(photo => photo.y === 0))
   await scrollProgress(0)
@@ -102,7 +121,7 @@ try {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.reload({ waitUntil: 'networkidle' })
   assert.ok((await positions()).every(photo => photo.y === 0))
-  evidence.push('Live and initial reduced motion show final static images; returning to normal motion restores scroll control')
+  evidence.push('Live and initial reduced motion show final static images without pinning or extra scroll space; returning to normal motion restores the pinned sequence')
   assert.deepEqual(errors, [])
   await writeFile('test-results/renewal-check.json', JSON.stringify({ evidence, errors }, null, 2))
   console.log(evidence.join('\n'))

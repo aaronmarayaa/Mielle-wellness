@@ -7,6 +7,8 @@ import { Checkbox } from './components/ui/checkbox'
 import { BotanicalBackdrop, useBotanicalFade } from './components/BotanicalBackdrop'
 import { HeroBackground } from './components/HeroBackground'
 import { RenewalSection } from './components/RenewalSection'
+import { OfferBanner } from './components/OfferBanner'
+import { AboutPage } from './components/AboutPage'
 
 const SITE = 'https://www.miellewellness.ca'
 const BOOKING = 'https://miellewellness.noterro.com/'
@@ -61,6 +63,7 @@ function TextLink({ children, href, onClick, className = '' }: { children: React
 }
 
 function App() {
+  const isAboutPage = window.location.pathname.replace(/\/$/, '') === '/about'
   useBotanicalFade()
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
@@ -76,14 +79,18 @@ function App() {
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState('')
   const menuButton = useRef<HTMLButtonElement>(null)
+  const bookingOrigin = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    document.title = isAboutPage ? 'About | Mielle Wellness' : 'Mielle Wellness | Enhance Wellness, Embrace Life'
+  }, [isAboutPage])
 
   useEffect(() => {
     const sections = [...document.querySelectorAll<HTMLElement>('main [data-nav]')]
     const header = document.querySelector<HTMLElement>('.site-header')
     const onScroll = () => {
       const headerHeight = header?.offsetHeight || 0
-      const offerTop = document.querySelector('.home-offer')?.getBoundingClientRect().top ?? Infinity
-      setScrolled((sections[0]?.getBoundingClientRect().bottom || 0) <= headerHeight || offerTop <= headerHeight)
+      setScrolled(isAboutPage || (sections[0]?.getBoundingClientRect().bottom || 0) <= headerHeight)
       const current = sections.filter(section => section.getBoundingClientRect().top < window.innerHeight * .35).at(-1)
       setActiveSection(current?.id || 'home')
     }
@@ -94,7 +101,7 @@ function App() {
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
     }
-  }, [])
+  }, [isAboutPage])
 
   useEffect(() => {
     const elements = [...document.querySelectorAll<HTMLElement>('[data-reveal]')]
@@ -140,6 +147,7 @@ function App() {
   }, [menuOpen])
 
   function openBooking(kind = 'Book an appointment') {
+    bookingOrigin.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setMenuOpen(false)
     setOfferOpen(false)
     setBooking(kind)
@@ -166,21 +174,22 @@ function App() {
     setNewsletterDraft(`mailto:${EMAIL}?subject=${encodeURIComponent('Newsletter subscription')}&body=${encodeURIComponent(`Please subscribe ${data.get('newsletterEmail')} to the Mielle Wellness newsletter. I consent to receiving email updates.`)}`)
   }
 
+  const homeHref = (section: string) => isAboutPage ? `/#${section}` : `#${section}`
   const nav = <>
-    <a href="#home" aria-current={activeSection === 'home' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>HOME</a>
-    <a href="#about" aria-current={activeSection === 'about' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>ABOUT</a>
-    <a href="#services" aria-current={activeSection === 'services' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>SERVICES</a>
-    <a href="#direct-billing" aria-current={activeSection === 'direct-billing' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>DIRECT BILLING</a>
+    <a href={homeHref('home')} aria-current={!isAboutPage && activeSection === 'home' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>HOME</a>
+    <a href="/about" aria-current={isAboutPage ? 'page' : undefined} onClick={() => setMenuOpen(false)}>ABOUT</a>
+    <a href={homeHref('services')} aria-current={!isAboutPage && activeSection === 'services' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>SERVICES</a>
+    <a href={homeHref('direct-billing')} aria-current={!isAboutPage && activeSection === 'direct-billing' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>DIRECT BILLING</a>
     <button onClick={() => { setMenuOpen(false); setOfferOpen(true) }}>PROMOS</button>
     <a href={`${SITE}/careers`} onClick={() => setMenuOpen(false)}>CAREERS</a>
-    <a href="#contact" aria-current={activeSection === 'contact' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>CONTACT</a>
+    <a href="#contact" aria-current={!isAboutPage && activeSection === 'contact' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>CONTACT</a>
   </>
 
   return (
     <>
       <a href="#main" className="skip-link">Skip to content</a>
-      <header className={`site-header ${scrolled || menuOpen ? 'is-solid' : ''}`}>
-        <a href="#home" className="header-logo" aria-label="Mielle Wellness home"><img src={asset('logo-mark.png')} alt="" width="140" height="117" /></a>
+      <header className={`site-header ${isAboutPage ? 'about-header' : ''} ${isAboutPage || scrolled || menuOpen ? 'is-solid' : ''}`}>
+        <a href={homeHref('home')} className="header-logo" aria-label="Mielle Wellness home"><img src={asset('logo-mark.png')} alt="" width="140" height="117" /></a>
         <nav className="desktop-nav" aria-label="Main navigation">{nav}</nav>
         <Button className="header-booking" onClick={() => openBooking()}>BOOK APPOINTMENT</Button>
         <Button ref={menuButton} variant="ghost" className="menu-button" aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={() => setMenuOpen(!menuOpen)}>
@@ -190,12 +199,10 @@ function App() {
         {menuOpen && <><button className="menu-backdrop" tabIndex={-1} aria-label="Close navigation" onClick={() => { setMenuOpen(false); menuButton.current?.focus() }} /><nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">{nav}<button onClick={() => openBooking()}>BOOK APPOINTMENT</button></nav></>}
       </header>
 
-      <main id="main" tabIndex={-1} inert={menuOpen}>
-        <div id="home" className="home-stack" data-nav>
-          <section className="hero" onFocusCapture={event => {
-            const offerTop = document.querySelector('.home-offer')?.getBoundingClientRect().top ?? Infinity
-            if (offerTop < event.target.getBoundingClientRect().bottom) event.currentTarget.parentElement?.scrollIntoView({ block: 'start', behavior: 'instant' })
-          }}>
+      <main id="main" className={isAboutPage ? 'about-page' : undefined} tabIndex={-1} inert={menuOpen}>
+        {isAboutPage ? <AboutPage /> : <>
+        <div id="home" className="home-cover" data-nav>
+          <section className="hero">
             <HeroBackground />
             <div className="hero-content">
               <h1 className="hero-brand"><span className="sr-only">Mielle Wellness. Massage, facials, and skincare in Calgary.</span><img src={asset('logo-full.png')} alt="" width="600" height="542" /></h1>
@@ -207,15 +214,9 @@ function App() {
               </div>
             </div>
           </section>
-          <section className="home-offer" aria-labelledby="home-offer-title">
-            <div className="home-offer-card">
-              <p className="eyebrow">EXCLUSIVE OFFER</p>
-              <h2 id="home-offer-title">10% Off Your First Appointment</h2>
-              <img src={asset('logo-full.png')} alt="" width="600" height="542" />
-              <Button variant="outline" size="lg" onClick={() => openBooking('Book your first appointment')}>Book your appointment now <ArrowRight aria-hidden="true" size={23} strokeWidth={1.2} /></Button>
-            </div>
-          </section>
         </div>
+
+        <OfferBanner onBook={() => openBooking('Book your first appointment')} />
 
         <section id="booking-options" className="booking-section botanical-section">
           <BotanicalBackdrop side="right" />
@@ -260,7 +261,7 @@ function App() {
         <section id="about" className="about-section botanical-section" data-nav>
           <BotanicalBackdrop side="right" />
           <img src={asset('about.png')} alt="The gold Mielle Wellness emblem mounted on a marble wall" loading="lazy" />
-          <div className="about-content" data-reveal><p className="eyebrow">ABOUT MIELLE WELLNESS</p><h2>Care is<br /><em>personal.</em></h2><p className="about-description">A massage for a tired body. Time spent listening to your skin concerns. Mielle is a place for those small, meaningful acts of care, with treatments chosen together.</p><p className="about-location">Our Calgary clinic</p><TextLink href={`${SITE}/about`}>Read more</TextLink></div>
+          <div className="about-content" data-reveal><p className="eyebrow">ABOUT MIELLE WELLNESS</p><h2>Care is<br /><em>personal.</em></h2><p className="about-description">A massage for a tired body. Time spent listening to your skin concerns. Mielle is a place for those small, meaningful acts of care, with treatments chosen together.</p><p className="about-location">Our Calgary clinic</p><TextLink href="/about">Read more</TextLink></div>
         </section>
 
         <section className="interior-section" aria-label="A glimpse of our wellness space"><img src={asset('interior.jpg')} alt="A quietly lit treatment room with cream linens, an arched mirror, and skincare shelves" loading="lazy" data-reveal /><p>A space to settle in.</p></section>
@@ -274,16 +275,17 @@ function App() {
           <div className="review-stage" aria-live="polite" aria-atomic="true">{reviews.map((review, index) => <blockquote key={review} aria-hidden={index !== reviewIndex}>{review}</blockquote>)}</div>
         </section>
 
-        <section id="contact" className="contact-section botanical-section" data-nav>
-          <BotanicalBackdrop />
-          <div className="contact-heading" data-reveal><p className="eyebrow">YOUR NEXT VISIT</p><h2>We’re here.</h2><p>For a question, a conversation,<br />or a little time for yourself.</p></div>
+        </>}
+        <section id="contact" className={`contact-section ${isAboutPage ? 'about-contact' : 'botanical-section'}`} data-nav>
+          {!isAboutPage && <BotanicalBackdrop />}
+          {isAboutPage ? <div className="contact-heading"><h2>Contact Us</h2></div> : <div className="contact-heading" data-reveal><p className="eyebrow">YOUR NEXT VISIT</p><h2>We’re here.</h2><p>For a question, a conversation,<br />or a little time for yourself.</p></div>}
           <div className="contact-grid">
             <div className="contact-info">
-              <h3>Visit Mielle.</h3><p className="contact-intro">Call us about a treatment or leave a message below. We’d love to hear from you.</p>
+              <h3>{isAboutPage ? 'Our Phone Number & Location' : 'Visit Mielle.'}</h3><p className="contact-intro">{isAboutPage ? 'We believe that wellness is more than a luxury, it’s a lifestyle. Step into Mielle Wellness and discover a space where beauty, healing, and tranquility come together in perfect harmony.' : 'Call us about a treatment or leave a message below. We’d love to hear from you.'}</p>
               <address><a className="contact-phone" href="tel:+18254078617">(825) 407-8617</a><a href={MAP} target="_blank" rel="noreferrer">Suite 134 - 1935 - 32 Ave. NE<br />Calgary, AB, T2E 7C8</a></address>
-              <div className="arrival-info"><a href={MAP} target="_blank" rel="noreferrer" className="map-link" aria-label="Open directions to Mielle Wellness in Google Maps"><img src={asset('map.png')} alt="Map showing the Mielle Wellness entrance at the back of the building off 32 Avenue NE" loading="lazy" /></a><p className="directions">Enter through the back of the building, by the large parking lot. Refer to the map or call us if you need a hand finding the entrance.</p></div>
+              <div className="arrival-info"><a href={MAP} target="_blank" rel="noreferrer" className="map-link" aria-label="Open directions to Mielle Wellness in Google Maps"><img src={asset('map.png')} alt="Map showing the Mielle Wellness entrance at the back of the building off 32 Avenue NE" width="441" height="488" loading="lazy" /></a><p className="directions">{isAboutPage ? 'Enter through the back of the building where the huge parking lot is. Refer to the attached image below or call us if you have questions.' : 'Enter through the back of the building, by the large parking lot. Refer to the map or call us if you need a hand finding the entrance.'}</p></div>
             </div>
-            <div className="contact-form-wrap"><h3>Leave us a message.</h3><p className="form-intro">Tell us how we can help.</p>
+            <div className="contact-form-wrap"><h3>{isAboutPage ? 'Leave your message here' : 'Leave us a message.'}</h3>{!isAboutPage && <p className="form-intro">Tell us how we can help.</p>}
               <form className="contact-form" onSubmit={prepareMessage}>
                 <label htmlFor="first-name">First name *<Input id="first-name" name="firstName" autoComplete="given-name" required maxLength={100} onChange={() => setMessageDraft('')} /></label>
                 <label htmlFor="last-name">Last name<Input id="last-name" name="lastName" autoComplete="family-name" maxLength={100} onChange={() => setMessageDraft('')} /></label>
@@ -307,24 +309,30 @@ function App() {
 
       </main>
 
-      <footer className="site-footer" inert={menuOpen}>
+      <footer className={`site-footer ${isAboutPage ? 'about-footer' : ''}`} inert={menuOpen}>
         <p className="footer-wordmark">Mielle Wellness</p>
         <div className="footer-grid">
-          <div className="newsletter"><p className="eyebrow">LETTERS FROM MIELLE</p><h2>A quiet hello,<br />now and then.</h2>
+          <div className="newsletter">{isAboutPage ? <h2>Don’t miss an update - subscribe!</h2> : <><p className="eyebrow">LETTERS FROM MIELLE</p><h2>A quiet hello,<br />now and then.</h2></>}
             <form onSubmit={prepareNewsletter}><div className="newsletter-input-row"><label htmlFor="newsletter-email">Email *<Input id="newsletter-email" type="email" name="newsletterEmail" autoComplete="email" required onChange={() => setNewsletterDraft('')} /></label><Button variant="light" type="submit">Subscribe</Button></div>
               <label className="consent-label" htmlFor="newsletter-consent"><Checkbox id="newsletter-consent" checked={consent} onCheckedChange={checked => { setConsent(checked === true); setNewsletterError(''); setNewsletterDraft('') }} />Yes, subscribe me to your newsletter.</label>
               {newsletterError && <p className="form-error" role="alert">{newsletterError}</p>}
               {newsletterDraft && <div className="form-feedback" role="status"><p>Your subscription request is ready.</p><a className="underline-link" href={newsletterDraft}>Open email to complete your subscription</a></div>}
             </form>
           </div>
-          <nav className="footer-navigation" aria-label="Footer navigation"><a href="#home">Home</a><a href="#services">Services</a><button onClick={() => openBooking()}>Booking</button><a href="#reviews">Reviews</a><a href="#contact">Contact</a></nav>
-          <div className="footer-social"><a href="https://www.facebook.com/miellewellness" target="_blank" rel="noreferrer">Facebook</a></div>
+          <nav className="footer-navigation" aria-label="Footer navigation"><a href={homeHref('home')}>Home</a><a href={homeHref('services')}>Services</a><button onClick={() => openBooking()}>Booking</button><a href={homeHref('reviews')}>Reviews</a><a href="#contact">Contact</a></nav>
+          <div className="footer-social">{isAboutPage && <span>Instagram</span>}<a href="https://www.facebook.com/miellewellness" target="_blank" rel="noreferrer">Facebook</a>{isAboutPage && <span>TikTok</span>}</div>
           <address className="footer-contact"><a href="tel:+18254078617">(825) 407-8617</a><a href={`mailto:${EMAIL}`}>{EMAIL}</a><a href={MAP} target="_blank" rel="noreferrer">Suite 134 - 1935 - 32 Ave. NE<br /><span>Calgary, AB, T2E 7C8</span></a></address>
         </div>
         <p className="copyright">© {new Date().getFullYear()} Mielle Wellness.<span>Powered by <a href="http://www.ascendlogix.com" target="_blank" rel="noreferrer">Ascend Logix</a></span></p>
       </footer>
 
-      <Dialog open={booking !== null} onOpenChange={(open) => { if (!open) setBooking(null) }}><DialogContent className="booking-dialog"><DialogTitle className="dialog-title">{booking}</DialogTitle><DialogDescription>Choose where you’d like to enjoy your treatment.</DialogDescription><div className="booking-dialog-options"><Button asChild size="lg"><a href={BOOKING} target="_blank" rel="noreferrer">Book In-Clinic <ArrowRight size={21} /></a></Button><Button asChild size="lg"><a href={`${SITE}/mobile-service`} target="_blank" rel="noreferrer">Book Mobile <ArrowRight size={21} /></a></Button><Button asChild variant="outline" size="lg"><a href={`${SITE}/skin-treatment`} target="_blank" rel="noreferrer">Skin Treatment <ArrowRight size={21} /></a></Button></div><p className="dialog-footnote">Questions before booking? <a href="tel:+18254078617">Call (825) 407-8617</a></p></DialogContent></Dialog>
+      <Dialog open={booking !== null} onOpenChange={(open) => { if (!open) setBooking(null) }}><DialogContent className="booking-dialog" onCloseAutoFocus={event => {
+        const origin = bookingOrigin.current
+        if (origin?.isConnected) {
+          event.preventDefault()
+          origin.focus({ preventScroll: true })
+        }
+      }}><DialogTitle className="dialog-title">{booking}</DialogTitle><DialogDescription>Choose where you’d like to enjoy your treatment.</DialogDescription><div className="booking-dialog-options"><Button asChild size="lg"><a href={BOOKING} target="_blank" rel="noreferrer">Book In-Clinic <ArrowRight size={21} /></a></Button><Button asChild size="lg"><a href={`${SITE}/mobile-service`} target="_blank" rel="noreferrer">Book Mobile <ArrowRight size={21} /></a></Button><Button asChild variant="outline" size="lg"><a href={`${SITE}/skin-treatment`} target="_blank" rel="noreferrer">Skin Treatment <ArrowRight size={21} /></a></Button></div><p className="dialog-footnote">Questions before booking? <a href="tel:+18254078617">Call (825) 407-8617</a></p></DialogContent></Dialog>
       <Dialog open={offerOpen} onOpenChange={setOfferOpen}><DialogContent className="offer-dialog"><p className="eyebrow">EXCLUSIVE OFFER</p><DialogTitle className="offer-title">10% Off Your First<br />Appointment</DialogTitle><DialogDescription className="sr-only">The first appointment offer featured by Mielle Wellness.</DialogDescription><img src={asset('logo-full.png')} alt="Mielle Wellness. Enhance Wellness, Embrace Life." /><TextLink onClick={() => openBooking('Book your first appointment')}>Book your appointment now</TextLink></DialogContent></Dialog>
       <Dialog open={insuranceOpen} onOpenChange={setInsuranceOpen}><DialogContent className="insurance-dialog"><DialogTitle className="dialog-title">Direct Billing</DialogTitle><DialogDescription>Eligible insurance providers. Please contact us to confirm coverage with your plan.</DialogDescription><div className="all-insurers">{insurers.map(([file, name]) => <img key={file} src={asset(`insurer-${file}`)} alt={name} loading="lazy" />)}</div><a className="text-link" href="tel:+18254078617">Confirm your coverage <ArrowRight size={22} /></a></DialogContent></Dialog>
     </>

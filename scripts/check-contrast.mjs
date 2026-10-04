@@ -17,7 +17,7 @@ for (const width of [320, 375, 600, 768, 1024, 1240, 1440, 1900]) {
     ['hero-hover-mobile', ['.hero-actions > button:nth-child(2)']],
     ['hero-hover-skin', ['.hero-actions > button:last-child']],
     ['booking', ['.booking-panel-content p']],
-    ['home-offer', ['.home-offer-card p', '.home-offer-card h2', '.home-offer-card button'], '.home-offer-card'],
+    ['home-offer', ['.offer-banner p', '.offer-banner h2', '.offer-banner button'], '.offer-banner'],
     ['booking-botanical', ['.booking-intro p', '.booking-intro h2', '.booking-note h3'], '.booking-intro'],
     ['services-botanical', ['.services-intro p', '.services-intro h2'], '.services-intro'],
     ['service-first', ['.service-row:first-child .service-content p', '.service-row:first-child h3', '.service-row:first-child .text-link'], '.service-row:first-child .service-content'],
