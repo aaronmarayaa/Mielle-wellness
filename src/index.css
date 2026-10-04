@@ -51,6 +51,19 @@ address { font-style: normal; }
 .mobile-nav > * { display: flex; align-items: center; min-height: 49px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13px; letter-spacing: .04em; }
 .mobile-nav > :last-child { margin-top: 16px; padding: 12px 18px; background: var(--ink); color: var(--paper); justify-content: center; }
 .mobile-nav [aria-current] { color: var(--plum); }
+.services-navigation { position: relative; }
+.services-nav-row { display: flex; align-items: center; }
+.services-nav-row > a { display: flex; align-items: center; min-height: 44px; }
+.services-nav-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: inherit; background: transparent; border: 0; }
+.services-nav-toggle svg { transition: transform 180ms ease; }
+.services-nav-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.services-submenu { position: absolute; z-index: 2; top: 100%; left: -16px; width: 238px; margin: 0; padding: 8px; list-style: none; background: #fff; color: #282e20; border: 1px solid var(--line); box-shadow: 0 8px 24px rgb(40 46 32 / .1); }
+.services-submenu[hidden] { display: none; }
+.services-submenu a { display: flex; align-items: center; min-height: 48px; padding: 10px 14px; font-size: 14px; line-height: 1.4; letter-spacing: 0; }
+.services-submenu a:hover, .services-submenu a:focus-visible { background: var(--sage); text-decoration: none; }
+.mobile-nav > .services-navigation { display: block; }
+.mobile-nav .services-nav-row > a { flex: 1; min-height: 49px; }
+.mobile-nav .services-submenu { position: static; width: 100%; padding: 0 0 10px 12px; background: transparent; border: 0; box-shadow: none; }
 [data-slot="button"] { border-radius: 2px; box-shadow: none; transition: background-color 240ms ease, color 240ms ease, border-color 240ms ease, transform 180ms ease; }
 [data-slot="button"] svg, .text-link svg { transition: transform 180ms ease; }
 [data-slot="button"]:active { transform: translateY(1px); }
@@ -382,6 +395,9 @@ address { font-style: normal; }
   .desktop-nav { display: flex; align-items: center; justify-content: center; gap: clamp(22px, 2vw, 36px); margin-inline: auto; font-size: 13px; letter-spacing: .025em; }
   .desktop-nav > * { position: relative; display: flex; align-items: center; min-height: 44px; white-space: nowrap; }
   .desktop-nav [aria-current] { color: var(--plum); }
+  .desktop-nav .services-navigation[data-active] .services-nav-row > a { color: var(--plum); }
+  .desktop-nav > .services-navigation::after { display: none; }
+  .desktop-nav .services-nav-row > a:hover { text-decoration: none; }
   .desktop-nav > *::after { content: ''; position: absolute; bottom: 7px; left: 0; right: 0; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 280ms ease; }
   .desktop-nav > *:hover, .desktop-nav > *:focus-visible { text-decoration: none; }
   .desktop-nav > *:hover::after, .desktop-nav > *:focus-visible::after, .desktop-nav [aria-current]::after { transform: scaleX(1); }
@@ -398,7 +414,33 @@ address { font-style: normal; }
 .hero-actions > button:focus-visible { outline: 2px solid var(--plum); outline-offset: 5px; }
 .header-booking:focus-visible { outline: 2px solid #1c2516; outline-offset: 5px; }
 .about-header.is-solid { background: #fff; }
-.about-page { --about-gutter: max(var(--gutter), calc((100vw - 1740px) / 2)); background: #fff; color: #282e20; }
+.inner-page { --about-gutter: max(var(--gutter), calc((100vw - 1740px) / 2)); background: #fff; color: #282e20; }
+.services-page-intro { text-align: center; padding: calc(var(--header-height) + clamp(44px, 4vw, 76px)) var(--gutter) clamp(52px, 5vw, 96px); }
+.services-page-intro h1 { font-family: var(--font-serif); font-size: clamp(42px, 5vw, 96px); line-height: 1.08; letter-spacing: -.035em; max-width: 1000px; margin-inline: auto; }
+.services-page-intro > p { max-width: 1140px; margin: 36px auto 0; font-size: clamp(16px, 1.2vw, 22px); line-height: 1.6; }
+.services-page-intro .services-booking { min-width: 210px; min-height: 60px; margin-top: 48px; border-radius: 0; background: #282e20; color: #fff; font-size: clamp(16px, 1.2vw, 22px); }
+.services-page-intro .services-booking:hover { background: var(--plum); }
+.treatment-gallery { display: grid; gap: 44px 28px; width: min(calc(100% - var(--gutter) * 2), 1560px); margin-inline: auto; padding-bottom: clamp(64px, 7vw, 132px); }
+.treatment-card { min-width: 0; animation: services-enter 520ms ease-out both; animation-delay: 120ms; }
+.treatment-card:nth-child(2) { animation-delay: 180ms; }
+.treatment-card:nth-child(3) { animation-delay: 240ms; }
+.services-page-intro > * { animation: services-enter 520ms ease-out both; }
+.services-page-intro > p { animation-delay: 60ms; }
+.services-page-intro > .services-booking { animation-delay: 120ms; }
+.treatment-booking { display: block; width: 100%; padding: 0; background: transparent; border: 0; text-align: left; color: inherit; }
+.treatment-booking:hover, .services-booking:hover { text-decoration: none; }
+.treatment-image { display: block; overflow: hidden; border-radius: 20px; }
+.treatment-booking img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; transition: transform 850ms cubic-bezier(.2, .65, .3, 1); }
+.treatment-booking h2 { margin-top: 20px; font-family: var(--font-sans); font-size: clamp(20px, 1.5vw, 28px); line-height: 1.4; letter-spacing: 0; text-wrap: wrap; }
+.treatment-price { margin-top: 20px; font-size: clamp(16px, 1.2vw, 22px); line-height: 1.5; }
+.treatment-price::before { content: ''; display: block; width: 22px; height: 1px; margin-bottom: 16px; background: currentColor; }
+@keyframes services-enter {
+  from { opacity: .35; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .treatment-booking:hover img { transform: scale(1.045); }
+}
 .about-page-intro { display: grid; align-items: center; gap: 36px; padding: calc(var(--header-height) + 36px) var(--about-gutter) 56px; }
 .about-page-copy .eyebrow { color: inherit; font-size: 14px; margin-bottom: 24px; letter-spacing: .03em; }
 .about-page-copy h1 { max-width: 900px; font-family: var(--font-serif); font-size: clamp(36px, 3.3vw, 62px); line-height: 1.2; letter-spacing: -.03em; text-wrap: pretty; }
@@ -420,7 +462,7 @@ address { font-style: normal; }
 .about-difference-body { display: grid; gap: 28px; align-items: center; margin-top: 30px; }
 .about-difference-body > p { max-width: 790px; font-size: clamp(16px, 1.2vw, 22px); line-height: 1.65; }
 .about-botanical { fill: currentColor; width: 100%; max-width: 400px; height: auto; justify-self: center; }
-.about-page .about-contact { --ink: #f2efea; --muted: #f2efea; --plum: #edca85; padding: 48px var(--about-gutter) 56px; background: #000; color: #f2efea; }
+.inner-page .about-contact { --ink: #f2efea; --muted: #f2efea; --plum: #edca85; padding: 48px var(--about-gutter) 56px; background: #000; color: #f2efea; }
 .about-contact .contact-heading { display: block; }
 .about-contact .contact-heading h2 { font-size: clamp(40px, 4vw, 62px); }
 .about-contact .contact-grid { margin-top: 36px; }
@@ -456,6 +498,7 @@ address { font-style: normal; }
 .about-page .about-contact { position: relative; z-index: 4; }
 .about-footer { position: relative; z-index: 5; min-height: calc(100svh - var(--header-height)); }
 @media (min-width: 620px) {
+  .treatment-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 64px; }
   .about-team-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px 32px; }
   .team-member:last-child { grid-column: 1 / -1; width: calc((100% - 32px) / 2); justify-self: center; }
   .about-team { padding-block: 48px 80px; }
@@ -463,7 +506,8 @@ address { font-style: normal; }
   .about-difference-body { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 40px; margin-top: 44px; }
 }
 @media (min-width: 960px) {
-  .about-page { --about-gutter: max(4vw, calc((100vw - 1740px) / 2)); }
+  .inner-page { --about-gutter: max(4vw, calc((100vw - 1740px) / 2)); }
+  .treatment-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 100px; }
   .about-page-intro { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: clamp(48px, 7vw, 140px); padding-top: calc(var(--header-height) + 56px); padding-bottom: 64px; }
   .about-page-copy > p:not(.eyebrow) { margin-top: 36px; }
   .about-page-emblem { justify-self: end; }

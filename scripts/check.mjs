@@ -46,6 +46,9 @@ try {
     if (id === 'about') {
       await page.waitForURL('**/about')
       await expect(page.getByRole('heading', { level: 1 })).toContainText('Professional wellness, massage and skin treatments')
+    } else if (id === 'services') {
+      await page.waitForURL('**/services')
+      await expect(page.locator('.treatment-card')).toHaveCount(8)
     } else {
       await page.waitForURL(`**/#${id}`)
       assert.equal(new URL(page.url()).hash, `#${id}`)
@@ -125,7 +128,7 @@ try {
     }, true)
   })
   assert.equal(await page.locator('.about-content a').getAttribute('href'), '/about')
-  for (const selector of ['.desktop-nav a[href^="https"]', '.contact-info a', '.site-footer a:not([href^="#"])']) {
+  for (const selector of ['.desktop-nav > a[href^="https"]', '.contact-info a', '.site-footer a:is([href^="http"], [href^="mailto:"], [href^="tel:"])']) {
     for (const link of await page.locator(selector).all()) await link.click()
   }
   await page.locator('.header-booking').click()

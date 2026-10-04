@@ -9,6 +9,8 @@ import { HeroBackground } from './components/HeroBackground'
 import { RenewalSection } from './components/RenewalSection'
 import { OfferBanner } from './components/OfferBanner'
 import { AboutPage } from './components/AboutPage'
+import { ServicesPage } from './components/ServicesPage'
+import { ServicesNav } from './components/ServicesNav'
 
 const SITE = 'https://www.miellewellness.ca'
 const BOOKING = 'https://miellewellness.noterro.com/'
@@ -63,7 +65,12 @@ function TextLink({ children, href, onClick, className = '' }: { children: React
 }
 
 function App() {
-  const isAboutPage = window.location.pathname.replace(/\/$/, '') === '/about'
+  const currentPath = window.location.pathname.replace(/\/$/, '')
+  const isAboutPage = currentPath === '/about'
+  const isServicesPage = currentPath === '/services'
+  const isInClinicPage = currentPath === '/in-clinic'
+  const isMobileServicePage = currentPath === '/mobile-service'
+  const isInnerPage = isAboutPage || isServicesPage || isInClinicPage || isMobileServicePage
   useBotanicalFade()
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
@@ -82,15 +89,15 @@ function App() {
   const bookingOrigin = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    document.title = isAboutPage ? 'About | Mielle Wellness' : 'Mielle Wellness | Enhance Wellness, Embrace Life'
-  }, [isAboutPage])
+    document.title = isAboutPage ? 'About | Mielle Wellness' : isInClinicPage ? 'In-Clinic Services | Mielle Wellness' : isMobileServicePage ? 'Mobile Services | Mielle Wellness' : isServicesPage ? 'Services | Mielle Wellness' : 'Mielle Wellness | Enhance Wellness, Embrace Life'
+  }, [isAboutPage, isServicesPage, isInClinicPage, isMobileServicePage])
 
   useEffect(() => {
     const sections = [...document.querySelectorAll<HTMLElement>('main [data-nav]')]
     const header = document.querySelector<HTMLElement>('.site-header')
     const onScroll = () => {
       const headerHeight = header?.offsetHeight || 0
-      setScrolled(isAboutPage || (sections[0]?.getBoundingClientRect().bottom || 0) <= headerHeight)
+      setScrolled(isInnerPage || (sections[0]?.getBoundingClientRect().bottom || 0) <= headerHeight)
       const current = sections.filter(section => section.getBoundingClientRect().top < window.innerHeight * .35).at(-1)
       setActiveSection(current?.id || 'home')
     }
@@ -101,7 +108,7 @@ function App() {
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
     }
-  }, [isAboutPage])
+  }, [isInnerPage])
 
   useEffect(() => {
     const elements = [...document.querySelectorAll<HTMLElement>('[data-reveal]')]
@@ -174,21 +181,21 @@ function App() {
     setNewsletterDraft(`mailto:${EMAIL}?subject=${encodeURIComponent('Newsletter subscription')}&body=${encodeURIComponent(`Please subscribe ${data.get('newsletterEmail')} to the Mielle Wellness newsletter. I consent to receiving email updates.`)}`)
   }
 
-  const homeHref = (section: string) => isAboutPage ? `/#${section}` : `#${section}`
+  const homeHref = (section: string) => isInnerPage ? `/#${section}` : `#${section}`
   const nav = <>
-    <a href={homeHref('home')} aria-current={!isAboutPage && activeSection === 'home' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>HOME</a>
+    <a href={homeHref('home')} aria-current={!isInnerPage && activeSection === 'home' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>HOME</a>
     <a href="/about" aria-current={isAboutPage ? 'page' : undefined} onClick={() => setMenuOpen(false)}>ABOUT</a>
-    <a href={homeHref('services')} aria-current={!isAboutPage && activeSection === 'services' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>SERVICES</a>
-    <a href={homeHref('direct-billing')} aria-current={!isAboutPage && activeSection === 'direct-billing' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>DIRECT BILLING</a>
+    <ServicesNav currentPath={currentPath} onNavigate={() => setMenuOpen(false)} />
+    <a href={homeHref('direct-billing')} aria-current={!isInnerPage && activeSection === 'direct-billing' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>DIRECT BILLING</a>
     <button onClick={() => { setMenuOpen(false); setOfferOpen(true) }}>PROMOS</button>
     <a href={`${SITE}/careers`} onClick={() => setMenuOpen(false)}>CAREERS</a>
-    <a href="#contact" aria-current={!isAboutPage && activeSection === 'contact' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>CONTACT</a>
+    <a href="#contact" aria-current={!isInnerPage && activeSection === 'contact' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>CONTACT</a>
   </>
 
   return (
     <>
       <a href="#main" className="skip-link">Skip to content</a>
-      <header className={`site-header ${isAboutPage ? 'about-header' : ''} ${isAboutPage || scrolled || menuOpen ? 'is-solid' : ''}`}>
+      <header className={`site-header ${isInnerPage ? 'about-header' : ''} ${isInnerPage || scrolled || menuOpen ? 'is-solid' : ''}`}>
         <a href={homeHref('home')} className="header-logo" aria-label="Mielle Wellness home"><img src={asset('logo-mark.png')} alt="" width="140" height="117" /></a>
         <nav className="desktop-nav" aria-label="Main navigation">{nav}</nav>
         <Button className="header-booking" onClick={() => openBooking()}>BOOK APPOINTMENT</Button>
@@ -199,8 +206,8 @@ function App() {
         {menuOpen && <><button className="menu-backdrop" tabIndex={-1} aria-label="Close navigation" onClick={() => { setMenuOpen(false); menuButton.current?.focus() }} /><nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">{nav}<button onClick={() => openBooking()}>BOOK APPOINTMENT</button></nav></>}
       </header>
 
-      <main id="main" className={isAboutPage ? 'about-page' : undefined} tabIndex={-1} inert={menuOpen}>
-        {isAboutPage ? <AboutPage /> : <>
+      <main id="main" className={isInnerPage ? `inner-page ${isAboutPage ? 'about-page' : 'services-page'}` : undefined} tabIndex={-1} inert={menuOpen}>
+        {isAboutPage ? <AboutPage /> : isServicesPage || isInClinicPage || isMobileServicePage ? <ServicesPage onBook={openBooking} variant={isInClinicPage ? 'in-clinic' : isMobileServicePage ? 'mobile' : 'overview'} /> : <>
         <div id="home" className="home-cover" data-nav>
           <section className="hero">
             <HeroBackground />
@@ -276,16 +283,16 @@ function App() {
         </section>
 
         </>}
-        <section id="contact" className={`contact-section ${isAboutPage ? 'about-contact' : 'botanical-section'}`} data-nav>
-          {!isAboutPage && <BotanicalBackdrop />}
-          {isAboutPage ? <div className="contact-heading"><h2>Contact Us</h2></div> : <div className="contact-heading" data-reveal><p className="eyebrow">YOUR NEXT VISIT</p><h2>We’re here.</h2><p>For a question, a conversation,<br />or a little time for yourself.</p></div>}
+        <section id="contact" className={`contact-section ${isInnerPage ? 'about-contact' : 'botanical-section'}`} data-nav>
+          {!isInnerPage && <BotanicalBackdrop />}
+          {isInnerPage ? <div className="contact-heading"><h2>Contact Us</h2></div> : <div className="contact-heading" data-reveal><p className="eyebrow">YOUR NEXT VISIT</p><h2>We’re here.</h2><p>For a question, a conversation,<br />or a little time for yourself.</p></div>}
           <div className="contact-grid">
             <div className="contact-info">
-              <h3>{isAboutPage ? 'Our Phone Number & Location' : 'Visit Mielle.'}</h3><p className="contact-intro">{isAboutPage ? 'We believe that wellness is more than a luxury, it’s a lifestyle. Step into Mielle Wellness and discover a space where beauty, healing, and tranquility come together in perfect harmony.' : 'Call us about a treatment or leave a message below. We’d love to hear from you.'}</p>
+              <h3>{isInnerPage ? 'Our Phone Number & Location' : 'Visit Mielle.'}</h3><p className="contact-intro">{isInnerPage ? 'We believe that wellness is more than a luxury, it’s a lifestyle. Step into Mielle Wellness and discover a space where beauty, healing, and tranquility come together in perfect harmony.' : 'Call us about a treatment or leave a message below. We’d love to hear from you.'}</p>
               <address><a className="contact-phone" href="tel:+18254078617">(825) 407-8617</a><a href={MAP} target="_blank" rel="noreferrer">Suite 134 - 1935 - 32 Ave. NE<br />Calgary, AB, T2E 7C8</a></address>
-              <div className="arrival-info"><a href={MAP} target="_blank" rel="noreferrer" className="map-link" aria-label="Open directions to Mielle Wellness in Google Maps"><img src={asset('map.png')} alt="Map showing the Mielle Wellness entrance at the back of the building off 32 Avenue NE" width="441" height="488" loading="lazy" /></a><p className="directions">{isAboutPage ? 'Enter through the back of the building where the huge parking lot is. Refer to the attached image below or call us if you have questions.' : 'Enter through the back of the building, by the large parking lot. Refer to the map or call us if you need a hand finding the entrance.'}</p></div>
+              <div className="arrival-info"><a href={MAP} target="_blank" rel="noreferrer" className="map-link" aria-label="Open directions to Mielle Wellness in Google Maps"><img src={asset('map.png')} alt="Map showing the Mielle Wellness entrance at the back of the building off 32 Avenue NE" width="441" height="488" loading="lazy" /></a><p className="directions">{isInnerPage ? 'Enter through the back of the building where the huge parking lot is. Refer to the attached image below or call us if you have questions.' : 'Enter through the back of the building, by the large parking lot. Refer to the map or call us if you need a hand finding the entrance.'}</p></div>
             </div>
-            <div className="contact-form-wrap"><h3>{isAboutPage ? 'Leave your message here' : 'Leave us a message.'}</h3>{!isAboutPage && <p className="form-intro">Tell us how we can help.</p>}
+            <div className="contact-form-wrap"><h3>{isInnerPage ? 'Leave your message here' : 'Leave us a message.'}</h3>{!isInnerPage && <p className="form-intro">Tell us how we can help.</p>}
               <form className="contact-form" onSubmit={prepareMessage}>
                 <label htmlFor="first-name">First name *<Input id="first-name" name="firstName" autoComplete="given-name" required maxLength={100} onChange={() => setMessageDraft('')} /></label>
                 <label htmlFor="last-name">Last name<Input id="last-name" name="lastName" autoComplete="family-name" maxLength={100} onChange={() => setMessageDraft('')} /></label>
@@ -309,18 +316,18 @@ function App() {
 
       </main>
 
-      <footer className={`site-footer ${isAboutPage ? 'about-footer' : ''}`} inert={menuOpen}>
+      <footer className={`site-footer ${isInnerPage ? 'about-footer' : ''}`} inert={menuOpen}>
         <p className="footer-wordmark">Mielle Wellness</p>
         <div className="footer-grid">
-          <div className="newsletter">{isAboutPage ? <h2>Don’t miss an update - subscribe!</h2> : <><p className="eyebrow">LETTERS FROM MIELLE</p><h2>A quiet hello,<br />now and then.</h2></>}
+          <div className="newsletter">{isInnerPage ? <h2>Don’t miss an update - subscribe!</h2> : <><p className="eyebrow">LETTERS FROM MIELLE</p><h2>A quiet hello,<br />now and then.</h2></>}
             <form onSubmit={prepareNewsletter}><div className="newsletter-input-row"><label htmlFor="newsletter-email">Email *<Input id="newsletter-email" type="email" name="newsletterEmail" autoComplete="email" required onChange={() => setNewsletterDraft('')} /></label><Button variant="light" type="submit">Subscribe</Button></div>
               <label className="consent-label" htmlFor="newsletter-consent"><Checkbox id="newsletter-consent" checked={consent} onCheckedChange={checked => { setConsent(checked === true); setNewsletterError(''); setNewsletterDraft('') }} />Yes, subscribe me to your newsletter.</label>
               {newsletterError && <p className="form-error" role="alert">{newsletterError}</p>}
               {newsletterDraft && <div className="form-feedback" role="status"><p>Your subscription request is ready.</p><a className="underline-link" href={newsletterDraft}>Open email to complete your subscription</a></div>}
             </form>
           </div>
-          <nav className="footer-navigation" aria-label="Footer navigation"><a href={homeHref('home')}>Home</a><a href={homeHref('services')}>Services</a><button onClick={() => openBooking()}>Booking</button><a href={homeHref('reviews')}>Reviews</a><a href="#contact">Contact</a></nav>
-          <div className="footer-social">{isAboutPage && <span>Instagram</span>}<a href="https://www.facebook.com/miellewellness" target="_blank" rel="noreferrer">Facebook</a>{isAboutPage && <span>TikTok</span>}</div>
+          <nav className="footer-navigation" aria-label="Footer navigation"><a href={homeHref('home')}>Home</a><a href="/services">Services</a><button onClick={() => openBooking()}>Booking</button><a href={homeHref('reviews')}>Reviews</a><a href="#contact">Contact</a></nav>
+          <div className="footer-social">{isInnerPage && <span>Instagram</span>}<a href="https://www.facebook.com/miellewellness" target="_blank" rel="noreferrer">Facebook</a>{isInnerPage && <span>TikTok</span>}</div>
           <address className="footer-contact"><a href="tel:+18254078617">(825) 407-8617</a><a href={`mailto:${EMAIL}`}>{EMAIL}</a><a href={MAP} target="_blank" rel="noreferrer">Suite 134 - 1935 - 32 Ave. NE<br /><span>Calgary, AB, T2E 7C8</span></a></address>
         </div>
         <p className="copyright">© {new Date().getFullYear()} Mielle Wellness.<span>Powered by <a href="http://www.ascendlogix.com" target="_blank" rel="noreferrer">Ascend Logix</a></span></p>

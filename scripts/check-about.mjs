@@ -76,8 +76,8 @@ try {
   for (const [label, hash] of [['HOME', 'home'], ['SERVICES', 'services'], ['DIRECT BILLING', 'direct-billing']]) {
     await page.goto('http://localhost:5173/about', { waitUntil: 'networkidle' })
     await page.locator('.desktop-nav').getByRole('link', { name: label, exact: true }).click()
-    await page.waitForURL(`**/#${hash}`)
-    await expect(page.locator(`#${hash}`)).toBeVisible()
+    await page.waitForURL(hash === 'services' ? '**/services' : `**/#${hash}`)
+    await expect(page.locator(hash === 'services' ? '.treatment-gallery' : `#${hash}`)).toBeVisible()
   }
   await page.goto('http://localhost:5173/about', { waitUntil: 'networkidle' })
   await page.locator('.desktop-nav').getByRole('link', { name: 'CONTACT', exact: true }).click()
@@ -104,7 +104,7 @@ try {
   await page.getByRole('button', { name: 'Subscribe', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Open email to complete your subscription' })).toBeVisible()
   for (const [label, hash] of [['Home', 'home'], ['Services', 'services'], ['Reviews', 'reviews']]) {
-    assert.equal(await page.locator('.footer-navigation').getByRole('link', { name: label, exact: true }).getAttribute('href'), `/#${hash}`)
+    assert.equal(await page.locator('.footer-navigation').getByRole('link', { name: label, exact: true }).getAttribute('href'), hash === 'services' ? '/services' : `/#${hash}`)
   }
   evidence.push('Refresh, trailing slash, desktop About link, browser back/forward, cross-page section links, local Contact, booking/Escape/focus, Promos, contact validation/email draft, newsletter consent/draft, and footer links pass')
 
@@ -121,7 +121,7 @@ try {
   await expect(menu).toBeFocused()
   await menu.click()
   await page.locator('.mobile-nav').getByRole('link', { name: 'SERVICES', exact: true }).click()
-  await page.waitForURL('**/#services')
+  await page.waitForURL('**/services')
   await expect(page.locator('.mobile-nav')).toHaveCount(0)
   await page.goto('http://localhost:5173/about', { waitUntil: 'networkidle' })
   await page.emulateMedia({ reducedMotion: 'no-preference' })
