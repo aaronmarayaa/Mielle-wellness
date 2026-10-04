@@ -24,7 +24,7 @@ export function ServicesNav({ currentPath, onNavigate }: { currentPath: string; 
     }
   }, [open])
 
-  return <div ref={root} className="services-navigation" data-active={['/in-clinic', '/mobile-service'].includes(currentPath) || undefined}
+  return <div ref={root} className="services-navigation" data-active={['/in-clinic', '/mobile-service', '/skin-treatment'].includes(currentPath) || undefined}
     onPointerEnter={event => { if (event.pointerType === 'mouse') setOpen(true) }}
     onPointerLeave={event => { if (!event.currentTarget.contains(document.activeElement)) setOpen(false) }}
     onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}
@@ -50,7 +50,7 @@ export function ServicesNav({ currentPath, onNavigate }: { currentPath: string; 
     <ul id={submenuId} className="services-submenu" hidden={!open}>
       <li><a href="/in-clinic" aria-current={currentPath === '/in-clinic' ? 'page' : undefined} onClick={onNavigate}>In-Clinic Services</a></li>
       <li><a href="/mobile-service" aria-current={currentPath === '/mobile-service' ? 'page' : undefined} onClick={onNavigate}>Mobile Services</a></li>
-      <li><a href="https://www.miellewellness.ca/skin-treatment" onClick={onNavigate}>Skin Treatment</a></li>
+      <li><a href="/skin-treatment" aria-current={currentPath === '/skin-treatment' ? 'page' : undefined} onClick={onNavigate}>Skin Treatment</a></li>
     </ul>
   </div>
 }

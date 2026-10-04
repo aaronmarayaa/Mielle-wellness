@@ -11,6 +11,7 @@ import { OfferBanner } from './components/OfferBanner'
 import { AboutPage } from './components/AboutPage'
 import { ServicesPage } from './components/ServicesPage'
 import { ServicesNav } from './components/ServicesNav'
+import { SkinTreatmentPage } from './components/SkinTreatmentPage'
 
 const SITE = 'https://www.miellewellness.ca'
 const BOOKING = 'https://miellewellness.noterro.com/'
@@ -70,7 +71,8 @@ function App() {
   const isServicesPage = currentPath === '/services'
   const isInClinicPage = currentPath === '/in-clinic'
   const isMobileServicePage = currentPath === '/mobile-service'
-  const isInnerPage = isAboutPage || isServicesPage || isInClinicPage || isMobileServicePage
+  const isSkinTreatmentPage = currentPath === '/skin-treatment'
+  const isInnerPage = isAboutPage || isServicesPage || isInClinicPage || isMobileServicePage || isSkinTreatmentPage
   useBotanicalFade()
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
@@ -89,8 +91,8 @@ function App() {
   const bookingOrigin = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    document.title = isAboutPage ? 'About | Mielle Wellness' : isInClinicPage ? 'In-Clinic Services | Mielle Wellness' : isMobileServicePage ? 'Mobile Services | Mielle Wellness' : isServicesPage ? 'Services | Mielle Wellness' : 'Mielle Wellness | Enhance Wellness, Embrace Life'
-  }, [isAboutPage, isServicesPage, isInClinicPage, isMobileServicePage])
+    document.title = isAboutPage ? 'About | Mielle Wellness' : isInClinicPage ? 'In-Clinic Services | Mielle Wellness' : isMobileServicePage ? 'Mobile Services | Mielle Wellness' : isSkinTreatmentPage ? 'Skin Treatment | Mielle Wellness' : isServicesPage ? 'Services | Mielle Wellness' : 'Mielle Wellness | Enhance Wellness, Embrace Life'
+  }, [isAboutPage, isServicesPage, isInClinicPage, isMobileServicePage, isSkinTreatmentPage])
 
   useEffect(() => {
     const sections = [...document.querySelectorAll<HTMLElement>('main [data-nav]')]
@@ -182,6 +184,7 @@ function App() {
   }
 
   const homeHref = (section: string) => isInnerPage ? `/#${section}` : `#${section}`
+  const contactHref = isSkinTreatmentPage ? '/#contact' : '#contact'
   const nav = <>
     <a href={homeHref('home')} aria-current={!isInnerPage && activeSection === 'home' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>HOME</a>
     <a href="/about" aria-current={isAboutPage ? 'page' : undefined} onClick={() => setMenuOpen(false)}>ABOUT</a>
@@ -189,7 +192,7 @@ function App() {
     <a href={homeHref('direct-billing')} aria-current={!isInnerPage && activeSection === 'direct-billing' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>DIRECT BILLING</a>
     <button onClick={() => { setMenuOpen(false); setOfferOpen(true) }}>PROMOS</button>
     <a href={`${SITE}/careers`} onClick={() => setMenuOpen(false)}>CAREERS</a>
-    <a href="#contact" aria-current={!isInnerPage && activeSection === 'contact' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>CONTACT</a>
+    <a href={contactHref} aria-current={!isInnerPage && activeSection === 'contact' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>CONTACT</a>
   </>
 
   return (
@@ -207,7 +210,7 @@ function App() {
       </header>
 
       <main id="main" className={isInnerPage ? `inner-page ${isAboutPage ? 'about-page' : 'services-page'}` : undefined} tabIndex={-1} inert={menuOpen}>
-        {isAboutPage ? <AboutPage /> : isServicesPage || isInClinicPage || isMobileServicePage ? <ServicesPage onBook={openBooking} variant={isInClinicPage ? 'in-clinic' : isMobileServicePage ? 'mobile' : 'overview'} /> : <>
+        {isAboutPage ? <AboutPage /> : isSkinTreatmentPage ? <SkinTreatmentPage /> : isServicesPage || isInClinicPage || isMobileServicePage ? <ServicesPage onBook={openBooking} variant={isInClinicPage ? 'in-clinic' : isMobileServicePage ? 'mobile' : 'overview'} /> : <>
         <div id="home" className="home-cover" data-nav>
           <section className="hero">
             <HeroBackground />
@@ -283,7 +286,7 @@ function App() {
         </section>
 
         </>}
-        <section id="contact" className={`contact-section ${isInnerPage ? 'about-contact' : 'botanical-section'}`} data-nav>
+        {!isSkinTreatmentPage && <section id="contact" className={`contact-section ${isInnerPage ? 'about-contact' : 'botanical-section'}`} data-nav>
           {!isInnerPage && <BotanicalBackdrop />}
           {isInnerPage ? <div className="contact-heading"><h2>Contact Us</h2></div> : <div className="contact-heading" data-reveal><p className="eyebrow">YOUR NEXT VISIT</p><h2>We’re here.</h2><p>For a question, a conversation,<br />or a little time for yourself.</p></div>}
           <div className="contact-grid">
@@ -312,7 +315,7 @@ function App() {
               </form>
             </div>
           </div>
-        </section>
+        </section>}
 
       </main>
 
@@ -326,7 +329,7 @@ function App() {
               {newsletterDraft && <div className="form-feedback" role="status"><p>Your subscription request is ready.</p><a className="underline-link" href={newsletterDraft}>Open email to complete your subscription</a></div>}
             </form>
           </div>
-          <nav className="footer-navigation" aria-label="Footer navigation"><a href={homeHref('home')}>Home</a><a href="/services">Services</a><button onClick={() => openBooking()}>Booking</button><a href={homeHref('reviews')}>Reviews</a><a href="#contact">Contact</a></nav>
+          <nav className="footer-navigation" aria-label="Footer navigation"><a href={homeHref('home')}>Home</a><a href="/services">Services</a><button onClick={() => openBooking()}>Booking</button><a href={homeHref('reviews')}>Reviews</a><a href={contactHref}>Contact</a></nav>
           <div className="footer-social">{isInnerPage && <span>Instagram</span>}<a href="https://www.facebook.com/miellewellness" target="_blank" rel="noreferrer">Facebook</a>{isInnerPage && <span>TikTok</span>}</div>
           <address className="footer-contact"><a href="tel:+18254078617">(825) 407-8617</a><a href={`mailto:${EMAIL}`}>{EMAIL}</a><a href={MAP} target="_blank" rel="noreferrer">Suite 134 - 1935 - 32 Ave. NE<br /><span>Calgary, AB, T2E 7C8</span></a></address>
         </div>
