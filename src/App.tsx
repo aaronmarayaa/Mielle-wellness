@@ -394,8 +394,7 @@ function App() {
         </section>
 
         </>}
-        {!isSkinTreatmentPage && <section id="contact" className={`contact-section ${isInnerPage ? 'about-contact' : 'botanical-section'}`} data-nav>
-          {!isInnerPage && <BotanicalBackdrop />}
+        {!isSkinTreatmentPage && <section id="contact" className={`contact-section${isInnerPage ? ' about-contact' : ''}`} data-nav>
           {isInnerPage ? <div className="contact-heading"><h2>Contact Us</h2></div> : <div className="contact-heading" data-reveal><h2 className="contact-kicker">YOUR NEXT VISIT</h2><h1>We’re here.</h1><p>For a question, a conversation,<br />or a little time for yourself.</p></div>}
           <div className="contact-grid">
             <div className="contact-info">
@@ -420,7 +419,7 @@ function App() {
       </main>
 
 
-      <footer className={`site-footer ${isInnerPage ? 'about-footer' : ''}`} inert={menuOpen}>
+      <footer className="site-footer" inert={menuOpen}>
         <p className="footer-wordmark">Mielle Wellness</p>
         <div className="footer-grid">
           <nav className="footer-navigation" aria-label="Footer navigation"><a href={homeHref('home')}>Home</a><a href="/services">Services</a><a href={BOOKING} target="_blank" rel="noreferrer">Booking</a><a href="/#reviews">Reviews</a><a href={contactHref}>Contact</a></nav>

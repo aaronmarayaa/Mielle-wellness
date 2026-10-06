@@ -50,6 +50,10 @@ address { font-style: normal; }
 .desktop-nav, .header-booking { display: none; }
 .site-header .header-booking { background: var(--ink); color: #fff; }
 .site-header .header-booking:hover { background: #273220; color: #fff; text-decoration: none; }
+.site-header:not(.about-header) > :is(.header-logo, .desktop-nav, .header-booking, .menu-button) { animation: home-nav-enter 480ms cubic-bezier(.2,.65,.3,1) backwards; }
+.site-header:not(.about-header) > :is(.desktop-nav, .menu-button) { animation-delay: 60ms; }
+.site-header:not(.about-header) > .header-booking { animation-delay: 100ms; }
+.site-header:not(.about-header):focus-within, .hero-content:focus-within { --home-enter-opacity: 1; --home-enter-y: 0px; }
 .menu-button { gap: 7px; font-size: 14px; min-height: 44px; min-width: 44px; padding: 8px; }
 .menu-backdrop { position: fixed; inset: var(--header-height) 0 0; background: rgb(52 65 45 / .25); cursor: default; animation: veil-enter 220ms ease both; }
 .mobile-nav { position: absolute; top: var(--header-height); left: 0; width: 100%; max-height: calc(100dvh - var(--header-height)); overflow-y: auto; background: var(--paper); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; padding: 12px var(--gutter) 30px; animation: menu-enter 320ms ease both; }
@@ -80,13 +84,22 @@ a[data-slot="button"]:hover { text-decoration: none; }
 .hero { position: relative; isolation: isolate; overflow: clip; display: grid; min-height: min(680px, 100svh); padding: calc(var(--header-height) + 12px) var(--gutter) 24px; background: #d5cab8; }
 .hero-background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 61% center; animation: photo-enter 1100ms ease both; }
 .hero::before { content: ''; position: absolute; z-index: 1; inset: 0; background: rgb(16 22 14 / .60); pointer-events: none; }
-.hero-content { position: relative; z-index: 2; justify-self: center; align-self: center; width: 100%; max-width: 980px; text-align: center; animation: hero-enter 800ms ease both; }
+.hero-content { position: relative; z-index: 2; justify-self: center; align-self: center; width: 100%; max-width: 980px; text-align: center; }
 .hero-brand { position: relative; top: -8px; margin-inline: auto; width: min(220px, 25svh); }
 .hero-brand > img { width: 100%; height: auto; }
 .hero-description { max-width: 880px; margin: 16px auto 0; padding: 8px 12px; font-size: 15px; line-height: 1.55; color: #fff; text-wrap: pretty; }
 .hero-actions { display: grid; gap: 12px; max-width: 760px; margin: 18px auto 0; }
 .hero-actions > [data-slot="button"] { justify-content: space-between; font-size: 15px; padding: 15px 22px; min-height: 54px; border: 0; color: #fff; }
 .hero-actions > [data-slot="button"]:not(:first-child) { background: rgb(16 22 14 / .25); border: 1px solid rgb(255 255 255 / .6); }
+.hero-brand { animation: hero-enter 600ms cubic-bezier(.2,.65,.3,1) backwards; }
+.hero-description { animation: hero-enter 500ms cubic-bezier(.2,.65,.3,1) 100ms backwards; }
+.hero-actions > a { animation: hero-enter 480ms cubic-bezier(.2,.65,.3,1) 160ms backwards; }
+.hero-actions > a:nth-child(2) { animation-delay: 220ms; }
+.hero-actions > a:nth-child(3) { animation-delay: 280ms; }
+.booking-panel:nth-child(2).reveal-ready { transition-delay: 100ms; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .hero-actions > a:is(:hover, :focus-visible) svg { transform: translateX(3px); }
+}
 .botanical-section { position: relative; isolation: isolate; }
 .botanical-backdrop { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; user-select: none; transition: opacity 1600ms ease-out; }
 .botanical-section.botanical-ready > .botanical-backdrop { opacity: 0; }
@@ -181,11 +194,11 @@ a[data-slot="button"]:hover { text-decoration: none; }
   .renewal-photo:first-child { margin-top: 160px; }
   .renewal-photo:nth-child(2) { margin-top: 80px; }
 }
-.billing-section { padding: 52px 0; background: #efe6d8; }
+.billing-section { padding: 52px 0; background: #fff; }
 .billing-section .section-intro { padding-inline: max(var(--gutter), calc((100vw - var(--content)) / 2)); }
 .billing-section h2 { font-size: 33px; line-height: 1.25; }
 .billing-copy .text-link { margin-top: 12px; font-size: 14px; }
-.insurance-carousel { --logo-width: 160px; --logo-gap: 32px; --slide-duration: 70s; overflow: hidden; padding: 14px 0; background: var(--paper); margin-top: 30px; }
+.insurance-carousel { --logo-width: 160px; --logo-gap: 32px; --slide-duration: 70s; overflow: hidden; padding: 14px 0; background: #fff; margin-top: 30px; }
 .insurance-track { display: flex; width: max-content; animation: insurance-slide var(--slide-duration) linear infinite; }
 .insurance-group { display: flex; flex-shrink: 0; gap: var(--logo-gap); padding-right: var(--logo-gap); }
 .insurance-logo { display: flex; align-items: center; justify-content: center; flex: 0 0 var(--logo-width); width: var(--logo-width); min-width: 0; height: 80px; }
@@ -237,7 +250,7 @@ a[data-slot="button"]:hover { text-decoration: none; }
 .form-feedback { font-size: 14px; line-height: 1.7; }
 .underline-link { display: inline-flex; align-items: center; min-height: 44px; margin: 4px 15px 0 0; padding-block: 6px; text-decoration: underline; text-underline-offset: 4px; background: none; }
 .form-error { color: var(--plum); font-size: 14px; line-height: 1.6; margin-top: 12px; }
-.site-footer { padding: 44px max(var(--gutter), calc((100vw - var(--content)) / 2)) 28px; background: #000; color: #fff; }
+.site-footer { position: relative; z-index: 5; padding: 44px max(var(--gutter), calc((100vw - var(--content)) / 2)) 28px; background: #000; color: #fff; }
 .footer-wordmark { font-family: var(--font-serif); font-size: clamp(34px, 7.2vw, 104px); letter-spacing: -.035em; line-height: 1.2; margin-bottom: 38px; padding-bottom: 28px; border-bottom: 1px solid #d8cdbd; text-align: center; }
 .footer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px; }
 .footer-navigation, .footer-social { display: flex; flex-direction: column; font-size: 14px; }
@@ -264,7 +277,8 @@ a[data-slot="button"]:hover { text-decoration: none; }
 .all-insurers img { width: 100%; height: 65px; object-fit: contain; }
 .reveal-ready { opacity: 0; transform: translateY(14px); transition: opacity 700ms ease, transform 700ms cubic-bezier(.2,.65,.3,1); }
 .reveal-ready.is-revealed, .reveal-ready:focus-within { opacity: 1; transform: none; }
-@keyframes hero-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes hero-enter { from { opacity: var(--home-enter-opacity, 0); transform: translateY(var(--home-enter-y, 12px)); } to { opacity: 1; transform: none; } }
+@keyframes home-nav-enter { from { opacity: var(--home-enter-opacity, 0); transform: translateY(var(--home-enter-y, -6px)); } to { opacity: 1; transform: none; } }
 @keyframes photo-enter { from { opacity: 0; } to { opacity: 1; } }
 @keyframes menu-enter { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 @keyframes dialog-enter { from { opacity: 0; scale: .98; } to { opacity: 1; scale: 1; } }
@@ -466,10 +480,6 @@ a[data-slot="button"]:hover { text-decoration: none; }
 .about-contact .contact-form > label { font-size: 16px; }
 .about-contact .contact-form input, .about-contact .contact-form textarea { border-color: #d8cdbd; }
 .about-contact .send-button { background: #fff; color: #282e20; min-width: 190px; }
-.about-footer { background: #000; color: #fff; padding-inline: max(var(--gutter), calc((100vw - 1740px) / 2)); }
-.about-footer .footer-wordmark { text-align: center; border: 0; font-size: clamp(48px, 10vw, 190px); margin-bottom: 54px; }
-.about-footer .footer-navigation, .about-footer .footer-social, .about-footer .footer-contact { font-size: clamp(15px, 1.2vw, 22px); }
-.about-footer .footer-social > span { display: flex; align-items: center; min-height: 44px; }
 .about-page.about-stack-ready { isolation: isolate; }
 .about-page.about-stack-ready > .about-difference { position: sticky; top: var(--stack-top); z-index: var(--stack-layer); min-height: calc(100svh - var(--stack-band-top)); padding-block: clamp(16px, 3svh, 32px) clamp(20px, 4svh, 48px); }
 .about-page.about-stack-ready .about-difference > .eyebrow { margin-bottom: 12px; }
@@ -482,7 +492,6 @@ a[data-slot="button"]:hover { text-decoration: none; }
 .about-page.about-stack-motion .about-botanical path:first-child { transform: translate(calc(var(--herb-progress, 0) * 32px), calc(var(--herb-progress, 0) * 24px)) rotate(calc(var(--herb-progress, 0) * -24deg)) scale(calc(1 - var(--herb-progress, 0) * .18)); }
 .about-page.about-stack-motion .about-botanical path:last-child { transform: translate(calc(var(--herb-progress, 0) * -40px), calc(var(--herb-progress, 0) * 24px)) rotate(calc(var(--herb-progress, 0) * 28deg)) scale(calc(1 - var(--herb-progress, 0) * .14)); }
 .about-page .about-contact { position: relative; z-index: 4; }
-.about-footer { position: relative; z-index: 5; min-height: calc(100svh - var(--header-height)); }
 @media (min-width: 620px) {
   .treatment-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 64px; }
   .about-team-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px 32px; }
@@ -508,11 +517,6 @@ a[data-slot="button"]:hover { text-decoration: none; }
   .about-contact .contact-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 8vw; margin-top: 58px; }
   .about-contact .contact-form { margin-top: 64px; }
   .about-contact .contact-intro { margin-top: 64px; }
-  .about-footer { padding-inline: max(4vw, calc((100vw - 1740px) / 2)); }
-  .about-footer .footer-grid { grid-template-columns: minmax(0, .6fr) minmax(0, .65fr) minmax(0, 1.2fr); gap: 32px; }
-  .about-footer .footer-navigation { grid-column: 1; grid-row: 1; }
-  .about-footer .footer-social { grid-column: 2; grid-row: 1; }
-  .about-footer .footer-contact { grid-column: 3; grid-row: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

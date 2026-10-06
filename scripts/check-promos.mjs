@@ -58,7 +58,7 @@ try {
     await expect(page.locator('.promos-hero > img')).toHaveAttribute('src', '/assets/promos-herbal-massage.jpeg')
     assert.ok(await page.locator('.promos-hero > img').evaluate(el => el.complete && el.naturalWidth === 683 && el.naturalHeight === 1024))
     assert.equal(await page.locator('.about-contact').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
-    assert.equal(await page.locator('.about-footer').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
+    assert.equal(await page.locator('.site-footer').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
     await expect(page.locator('.site-footer form')).toHaveCount(0)
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     if ([375, 1900].includes(width)) {

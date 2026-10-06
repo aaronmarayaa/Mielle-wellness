@@ -19,7 +19,7 @@ const layout = () => page.evaluate(() => ({
     top: parseFloat(getComputedStyle(el).getPropertyValue('--stack-top')),
   })),
   contact: document.querySelector('.about-contact').getBoundingClientRect().top + scrollY,
-  footer: document.querySelector('.about-footer').getBoundingClientRect().top + scrollY,
+  footer: document.querySelector('.site-footer').getBoundingClientRect().top + scrollY,
 }))
 
 try {
@@ -73,12 +73,18 @@ try {
     }
     assert.equal(await page.evaluate(header => Boolean(document.elementFromPoint(innerWidth / 2, header + 6)?.closest('.about-contact')), positions.header), true)
     if (width === 1440) await page.screenshot({ path: 'test-results/about-stack-contact-cover.png' })
-    const footerStart = await page.locator('.about-footer').evaluate(el => el.getBoundingClientRect().top + scrollY)
+    const footerStart = await page.locator('.site-footer').evaluate(el => el.getBoundingClientRect().top + scrollY)
     await move(footerStart - positions.header)
-    assert.equal(await page.evaluate(header => Boolean(document.elementFromPoint(innerWidth / 2, header + 6)?.closest('.about-footer')), positions.header), true)
+    const footerCoversStack = await page.locator('.site-footer').evaluate(el => {
+      const rect = el.getBoundingClientRect()
+      const top = Math.max(rect.top + 6, document.querySelector('.site-header').offsetHeight + 6)
+      const bottom = Math.min(rect.bottom - 6, innerHeight - 6)
+      return bottom > top && [top, (top + bottom) / 2, bottom].every(y => el.contains(document.elementFromPoint(innerWidth / 2, y)))
+    })
+    assert.equal(footerCoversStack, true)
     if (width === 1440) await page.screenshot({ path: 'test-results/about-stack-footer-cover.png' })
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
-    evidence.push(`${width}x${height}: three pinned panels retain visible headings, ten scroll checkpoints fold/shrink herbs, reverse and paused scrolling are stable, contact and full-height footer cover the stack, no overflow`)
+    evidence.push(`${width}x${height}: three pinned panels retain visible headings, ten scroll checkpoints fold/shrink herbs, reverse and paused scrolling are stable, contact and shared footer cover the stack, no overflow`)
   }
 
   for (const [width, height] of [[320, 568], [375, 812], [768, 650], [1024, 600]]) {

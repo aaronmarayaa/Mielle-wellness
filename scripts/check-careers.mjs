@@ -72,7 +72,7 @@ try {
     await expect(country).toBeFocused()
     await expect(page.locator('.career-country-panel')).toHaveCount(0)
     assert.equal(await page.locator('.about-contact').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
-    assert.equal(await page.locator('.about-footer').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
+    assert.equal(await page.locator('.site-footer').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
     if ([375, 1900].includes(width)) {
       await page.locator('#contact').scrollIntoViewIfNeeded()
       await page.locator('.site-footer').scrollIntoViewIfNeeded()

@@ -1,6 +1,12 @@
 # Verification
 
-Updated 6 October 2026. Anti-Slop DURING (global preference). UI verification gate: **PASS**. Live email delivery awaits FormSubmit activation and inbox verification.
+Updated 7 October 2026. Anti-Slop DURING (global preference). UI verification gate: **PASS**. Live email delivery awaits FormSubmit activation and inbox verification.
+
+This revision passes `npm run build`, `npm run check`, `node scripts/check-home-video.mjs`, `node scripts/check-about-stack.mjs` and `git diff --check`. Manual browser inspections record the new entrances and the shared footer across all nine routes. Earlier form, review and service reports below remain recorded separately.
+
+Latest Home entrances: navbar groups fade and slide for 480ms; the logo, description and three booking actions enter in a short stagger. Browser animation sampling confirms only opacity and transform change, each entrance runs once, and finished elements have no remaining animation or transform. Focus during an entrance immediately exposes the controls; reduced motion removes every new entrance. The phone menu and settled phone/desktop Home layouts were visually inspected. Eight Home dimensions still pass short-screen action visibility, video playback/pause/resume, offer timing and booking, reduced motion and playback fallback. Evidence: [entrance inspection](test-results/home-entrance-inspection.json), [phone Home](test-results/home-entrance-settled-375.png), [desktop Home](test-results/home-entrance-settled-1440.png), [phone menu](test-results/home-entrance-menu-375.png), [Home checks](test-results/home-video-offer-check.json).
+
+Latest shared footer and section changes: the Home practical-details section and insurer strip both compute to white; the Home contact section has no botanical backdrop. All nine routes have identical footer dimensions, typography, gutters, columns, rules and spacing at 375, 768 and 1440px, with centered wordmarks and no document overflow. Home, About and Careers footer captures and the white billing/contact sections were visually inspected. About's nine-dimension scroll check confirms the common footer remains opaque above the sticky panels. Existing Careers, Promos and About checks now target the common `.site-footer`, with About coverage sampled inside the footer's actual visible bounds. Evidence: [shared-footer inspection](test-results/shared-footer-inspection.json), [desktop footer](test-results/shared-footer-about-1440.png), [phone footer](test-results/shared-footer-careers-375.png), [white billing](test-results/billing-white-1440.png), [contact without leaves](test-results/contact-no-leaves-1440.png), [About checks](test-results/about-stack-check.json).
 
 Latest alignment and footer changes: review messages and the Home Mielle Wellness wordmark are centered. Reviews still cross-fade for 280ms on Next/Previous, with stable height and one accessible active quote; reduced motion switches instantly. The inner-page Contact Us heading scales from 32 to 60px. Every shared footer uses the supplied Instagram/TikTok URLs, Booking opens Noterro directly, and Reviews reaches the visible Home section even when navigating from Careers. Phone/desktop captures and actual keyboard navigation are recorded in [footer updates](test-results/footer-updates-check.json), [centered phone footer](test-results/footer-centered-375.png), [centered desktop footer](test-results/footer-centered-1440.png), [review checks](test-results/reviews-check.json), [phone reviews](test-results/reviews-375.png) and [desktop reviews](test-results/reviews-1440.png).
 
@@ -118,7 +124,7 @@ Restored desktop treatment/contact and phone introduction screenshots were visua
 - R-12 PASS: no component shadows.
 - R-13 PASS: no glow.
 - R-14 PASS: treatment rows use alternating photo positions and unequal crops rather than interchangeable service cards.
-- R-19 PASS: purposeful offer, botanical, menu, About and manual-review motion remains. Scroll bursts are frame-batched, unchanged values avoid writes and offscreen video pauses; reduced motion retains usable controls/content. Purposes: DESIGN.md. Evidence: home-video-offer-check.json, about-stack-check.json and reviews-check.json.
+- R-19 PASS: requested Home/navbar entrances use one-time opacity/transform animations, settle without persistent transforms and expose focused controls immediately. Purposeful offer, botanical, menu, About and manual-review motion remains. Scroll bursts are frame-batched, unchanged values avoid writes and offscreen video pauses; reduced motion retains usable controls/content. Purposes: DESIGN.md. Evidence: home-entrance-inspection.json, home-video-offer-check.json, about-stack-check.json and reviews-check.json.
 - R-22 PASS: the supplied video and brand imagery remain specific to Mielle; olive and lavender drawings fulfil explicit user requests.
 
 ## Liveliness
@@ -143,7 +149,7 @@ Restored desktop treatment/contact and phone introduction screenshots were visua
 - R-15 PASS: existing action labels are restored at the user's request; no new generic CTA is written.
 - R-16 PASS: prior wording is restored; the new paragraph is supplied reference copy, not generated prose.
 - R-20 PASS: the supplied gold brand assets, treatment video, typefaces, and botanicals maintain Mielle's identity.
-- R-21 PASS: the homepage retains warm light sections and an olive footer; About uses the supplied white, pale-yellow, gold, and black section references, rather than adding a site-wide theme toggle.
+- R-21 PASS: Home retains warm light sections, with the requested white practical-details section and an unobstructed contact background. Every route uses the same black footer. About retains the supplied white, pale-yellow, gold and black section references; no theme toggle is introduced.
 - R-29 PASS: olive/sage/gold form an analogous family; plum is a controlled complementary accent, with warm neutrals supporting it.
 - R-30 PASS: composition follows the supplied Mielle references and explicit revisions, not another product's interface.
 - R-31 PASS: DESIGN.md explains the principal visual decisions, including Promos proximity, similarity, continuity, balance, figure/ground, colour, heading scale, spacing, rules and transitions.
