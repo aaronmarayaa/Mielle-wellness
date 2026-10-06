@@ -1,3 +1,4 @@
+import { mockContact } from './mock-contact.mjs'
 import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -5,6 +6,8 @@ import { mkdir, writeFile } from 'node:fs/promises'
 await mkdir('test-results', { recursive: true })
 const browser = await chromium.launch({ channel: 'chrome' })
 const page = await browser.newPage({ reducedMotion: 'reduce' })
+await mockContact(page)
+await page.context().route('https://miellewellness.noterro.com/**', route => route.fulfill({ contentType: 'text/html', body: '<title>Booking destination check</title>' }))
 const evidence = [], errors = []
 page.on('pageerror', error => errors.push(error.message))
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
@@ -26,9 +29,10 @@ try {
     const bounds = await page.evaluate(() => ({
       headerBottom: document.querySelector('.site-header').getBoundingClientRect().bottom,
       logoTop: document.querySelector('.hero-brand').getBoundingClientRect().top,
-      buttons: [...document.querySelectorAll('.hero-actions button')].map(button => button.getBoundingClientRect().toJSON()),
+      buttons: [...document.querySelectorAll('.hero-actions a')].map(button => button.getBoundingClientRect().toJSON()),
     }))
     assert.ok(bounds.logoTop >= bounds.headerBottom)
+    assert.equal(bounds.buttons.length, 3)
     assert.ok(bounds.buttons.every(rect => rect.height >= 44 && rect.bottom <= height - 8))
     evidence.push(`${width}x${height}: logo clears header; three home actions fit without scrolling`)
   }
@@ -49,45 +53,81 @@ try {
     } else if (id === 'services') {
       await page.waitForURL('**/services')
       await expect(page.locator('.treatment-card')).toHaveCount(8)
+    } else if (id === 'direct-billing') {
+      await page.waitForURL('**/direct-billing')
+      await expect(page.locator('.direct-billing-logo')).toHaveCount(32)
     } else {
-      await page.waitForURL(`**/#${id}`)
+      await page.waitForURL(`**#${id}`)
       assert.equal(new URL(page.url()).hash, `#${id}`)
     }
   }
-  const triggers = page.locator('button').filter({ hasText: /^\s*(BOOK APPOINTMENT|Book In-Clinic|Book Mobile|Skin Treatment|Book your appointment now|Book now|Booking)\s*$/ })
-  let bookingChecks = 0
-  for (const trigger of await triggers.all()) {
-    if (!await trigger.isVisible()) continue
-    await trigger.click()
-    await expect(page.getByRole('dialog')).toBeVisible()
-    assert.equal(await page.getByRole('dialog').getByRole('link', { name: 'Book In-Clinic', exact: true }).getAttribute('href'), 'https://miellewellness.noterro.com/')
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog')).toBeHidden()
-    bookingChecks++
+  await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
+  for (const [selector, path] of [
+    ['.hero-actions a:nth-child(1)', '/in-clinic'],
+    ['.hero-actions a:nth-child(2)', '/mobile-service'],
+    ['.hero-actions a:nth-child(3)', '/skin-treatment'],
+    ['.booking-panel:nth-child(1) .text-link', '/mobile-service'],
+    ['.booking-panel:nth-child(2) .text-link', '/in-clinic'],
+  ]) {
+    const link = page.locator(selector)
+    await expect(link).toHaveAttribute('href', path)
+    await link.focus()
+    await page.keyboard.press('Enter')
+    await page.waitForURL(`**${path}`)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
   }
-  evidence.push(`${bookingChecks} booking actions open working booking choices; Escape closes`)
+  const appointment = page.locator('.header-booking')
+  await expect(appointment).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
+  await appointment.focus()
+  const desktopBookingTab = page.waitForEvent('popup')
+  await page.keyboard.press('Enter')
+  const desktopBooking = await desktopBookingTab
+  await desktopBooking.waitForURL('https://miellewellness.noterro.com/')
+  await desktopBooking.close()
+  evidence.push('Home hero and photographic booking links open their local service pages by keyboard; desktop Book Appointment opens Noterro directly')
+  for (let index = 0; index < 3; index++) {
+    const treatment = page.locator('.service-content').nth(index).getByRole('link', { name: 'Book now', exact: true })
+    await expect(treatment).toHaveAttribute('href', '/in-clinic')
+    await treatment.focus()
+    await page.keyboard.press('Enter')
+    await page.waitForURL('**/in-clinic')
+    await expect(page.getByRole('heading', { name: 'In-Clinic Services', exact: true })).toBeVisible()
+    await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
+  }
+  evidence.push('All three Home treatment Book now links open /in-clinic by keyboard')
   for (const navigation of ['.desktop-nav']) {
-    await page.locator(navigation).getByRole('button', { name: 'PROMOS', exact: true }).click()
-    await expect(page.getByRole('dialog').getByRole('heading', { name: '10% Off Your First Appointment' })).toBeVisible()
-    await page.getByRole('dialog').getByRole('button', { name: 'Book your appointment now' }).click()
-    await expect(page.getByRole('dialog').getByRole('heading', { name: 'Book your first appointment' })).toBeVisible()
-    await page.getByRole('button', { name: 'Close dialog' }).click()
+    await page.locator(navigation).getByRole('link', { name: 'PROMOS', exact: true }).click()
+    await page.waitForURL('**/promos')
+    await expect(page.getByRole('heading', { name: 'PROMOS', exact: true })).toBeVisible()
+    await page.locator('.promotion-booking').last().click()
+    await page.waitForURL('**/services')
+    await expect(page.locator('.treatment-card')).toHaveCount(8)
   }
-  evidence.push('Promos shows the supplied offer; its booking action and close control work')
-  assert.equal(await page.locator('.insurance-group').first().locator('img').count(), 31)
+  evidence.push('Promos opens its own page; the first-visit Book Now link opens Services')
+  await page.locator('.desktop-nav').getByRole('link', { name: 'CAREERS', exact: true }).click()
+  await page.waitForURL('**/careers')
+  await expect(page.getByRole('heading', { name: 'Careers', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Apply Now', exact: true }).click()
+  await expect(page.locator('#application-first-name')).toBeFocused()
+  await expect(page.locator('.application-form')).toBeVisible()
+  evidence.push('Careers opens its own page; Apply Now reaches the application form and focuses First name')
+  await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
+  assert.equal(await page.locator('.insurance-group').first().locator('img').count(), 32)
   assert.equal(await page.locator('.insurance-track button').count(), 0)
   assert.equal(await page.locator('.insurance-track').evaluate(el => getComputedStyle(el).animationName), 'none')
   assert.equal(await page.locator('.service-detail').count(), 3)
   assert.equal(await page.locator('.booking-note p').innerText(), 'We’re excited to announce that our mobile and in-clinic massage services are now available in one easy booking system! Whether you prefer to visit us or enjoy treatment in the comfort of your home, booking your self-care is now simpler, faster, and more convenient than ever.')
-  await page.getByRole('button', { name: 'See All', exact: true }).click()
-  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Direct Billing' })).toBeVisible()
-  assert.equal(await page.locator('.all-insurers img').count(), 31)
-  await page.keyboard.press('Escape')
+  await page.getByRole('link', { name: 'See All', exact: true }).click()
+  await page.waitForURL('**/direct-billing')
+  await expect(page.getByRole('heading', { name: 'DIRECT BILLING', exact: true })).toBeVisible()
+  assert.equal(await page.locator('.direct-billing-logo img').count(), 32)
+  await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
   await page.getByRole('button', { name: 'Next review' }).click()
   await expect(page.locator('.review-stage blockquote[aria-hidden="false"]')).toContainText('I had a massage at Mielle Wellness')
   await page.getByRole('button', { name: 'Previous review' }).click()
   await expect(page.locator('.review-stage blockquote[aria-hidden="false"]')).toContainText('The massage was amazing!')
-  evidence.push('Restored treatment details and Direct Billing announcement remain; See All opens 31 logos; both review controls work')
+  evidence.push('Restored treatment details and Direct Billing announcement remain; See All opens the page with 32 logos; both review controls work')
 
   await page.getByRole('button', { name: 'SEND', exact: true }).click()
   assert.equal(await page.locator('#first-name').evaluate(el => el.validity.valueMissing), true)
@@ -96,27 +136,12 @@ try {
   await page.locator('#contact-email').fill('visitor@example.com')
   await page.locator('#message').fill('Treatment enquiry for the restored website.')
   await page.getByRole('button', { name: 'SEND', exact: true }).click()
-  const message = await page.getByRole('link', { name: 'Open email to send', exact: true }).getAttribute('href')
-  assert.ok(decodeURIComponent(message).includes('Website enquiry from Test Visitor'))
-  await page.evaluate(() => { Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: async text => { window.copiedMessage = text } }) })
-  await page.getByRole('button', { name: 'Copy message', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Message copied', exact: true })).toBeVisible()
-  assert.ok(await page.evaluate(() => window.copiedMessage.includes('Test Visitor')))
-  await page.evaluate(() => { Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: async () => { throw new Error('Clipboard blocked') } }) })
-  await page.getByRole('button', { name: 'Message copied', exact: true }).click()
-  await expect(page.locator('.contact-form .form-error')).toBeVisible()
+  await expect(page.locator('.contact-form .form-feedback')).toContainText('Your message has been submitted.')
   await page.locator('#message').fill('Updated enquiry')
   await expect(page.locator('.contact-form .form-feedback')).toHaveCount(0)
 
-  await page.locator('#newsletter-email').fill('visitor@example.com')
-  await page.getByRole('button', { name: 'Subscribe', exact: true }).click()
-  await expect(page.locator('.newsletter .form-error')).toBeVisible()
-  await page.getByRole('checkbox').check()
-  await page.getByRole('button', { name: 'Subscribe', exact: true }).click()
-  await expect(page.getByRole('link', { name: 'Open email to complete your subscription' })).toBeVisible()
-  await page.getByRole('checkbox').uncheck()
-  await expect(page.locator('.newsletter .form-feedback')).toHaveCount(0)
-  evidence.push('Contact validates required fields, prepares an email draft, copies with success/error feedback, and clears stale drafts; newsletter requires consent and prepares an email request')
+  await expect(page.locator('.site-footer form')).toHaveCount(0)
+  evidence.push('Contact validates required fields, submits directly to a mocked FormSubmit and clears stale success feedback; the footer subscription form is removed')
   await page.evaluate(() => {
     window.checkedLinks = []
     document.addEventListener('click', event => {
@@ -128,15 +153,17 @@ try {
     }, true)
   })
   assert.equal(await page.locator('.about-content a').getAttribute('href'), '/about')
-  for (const selector of ['.desktop-nav > a[href^="https"]', '.contact-info a', '.site-footer a:is([href^="http"], [href^="mailto:"], [href^="tel:"])']) {
+  for (const selector of ['.header-booking', '.contact-info a', '.site-footer a:is([href^="http"], [href^="mailto:"], [href^="tel:"])']) {
     for (const link of await page.locator(selector).all()) await link.click()
   }
-  await page.locator('.header-booking').click()
-  for (const link of await page.getByRole('dialog').getByRole('link').all()) await link.click()
-  await page.keyboard.press('Escape')
+  const footerBooking = page.locator('.footer-navigation').getByRole('link', { name: 'Booking', exact: true })
+  await expect(footerBooking).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
   const externalClicks = await page.evaluate(() => window.checkedLinks)
-  assert.equal(externalClicks.length, 13)
-  evidence.push('About resolves to the new local page; Careers, contact phone, address, map, Facebook, footer contact/credit, three booking destinations, and booking phone links respond; outgoing navigation intercepted during testing')
+  assert.equal(externalClicks.length, 12)
+  assert.ok(externalClicks.includes('https://www.instagram.com/miellewellness/'))
+  assert.ok(externalClicks.includes('https://www.tiktok.com/@mielle.wellness'))
+  assert.ok(externalClicks.includes('https://miellewellness.noterro.com/'))
+  evidence.push('About and Careers resolve to local pages; contact phone, address, map, supplied Instagram/TikTok/Facebook footer links, direct Noterro footer Booking, footer contact and credit links respond; outgoing navigation is intercepted during testing')
   await page.setViewportSize({ width: 375, height: 812 })
   const menu = page.getByRole('button', { name: 'Menu', exact: true })
   await menu.click()
@@ -156,14 +183,21 @@ try {
   await expect(page.locator('.desktop-nav')).toBeVisible()
   await page.setViewportSize({ width: 375, height: 812 })
   await menu.click()
-  await page.locator('.mobile-nav').getByRole('button', { name: 'BOOK APPOINTMENT', exact: true }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await page.keyboard.press('Escape')
+  const mobileAppointment = page.locator('.mobile-nav').getByRole('link', { name: 'BOOK APPOINTMENT', exact: true })
+  await expect(mobileAppointment).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
+  await mobileAppointment.focus()
+  const mobileBookingTab = page.waitForEvent('popup')
+  await page.keyboard.press('Enter')
+  const mobileBooking = await mobileBookingTab
+  await mobileBooking.waitForURL('https://miellewellness.noterro.com/')
+  await mobileBooking.close()
+  await expect(page.locator('.mobile-nav')).toHaveCount(0)
   await menu.click()
-  await page.locator('.mobile-nav').getByRole('button', { name: 'PROMOS', exact: true }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await page.keyboard.press('Escape')
+  await page.locator('.mobile-nav').getByRole('link', { name: 'PROMOS', exact: true }).click()
+  await page.waitForURL('**/promos')
+  await expect(page.getByRole('heading', { name: 'PROMOS', exact: true })).toBeVisible()
   await page.locator('.header-logo').click()
+  await expect(page.locator('.hero-content')).toBeVisible()
   await page.screenshot({ path: 'test-results/mobile-full.png', fullPage: true })
   await page.keyboard.press('Tab')
   await page.locator('.skip-link').focus()

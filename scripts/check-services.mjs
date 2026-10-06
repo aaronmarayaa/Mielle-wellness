@@ -1,3 +1,4 @@
+import { mockContact } from './mock-contact.mjs'
 import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -5,10 +6,28 @@ import { mkdir, writeFile } from 'node:fs/promises'
 await mkdir('test-results', { recursive: true })
 const browser = await chromium.launch({ channel: 'chrome' })
 const page = await browser.newPage({ reducedMotion: 'reduce' })
+await mockContact(page)
 const errors = [], evidence = []
 page.on('pageerror', error => errors.push(error.message))
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
 const titles = ['Relaxation Massage', 'Deep Tissue Therapeutic Massage', 'Cupping Therapy', 'Hot Stone Massage Therapy', 'Youth Massage (16 years old under)', 'Pre-Natal Massage (15weeks above)', 'Thai Massage Therapy (on Bed)', 'Lymphatic Drainage Massage']
+const destinations = [
+  'https://miellewellness.noterro.com/book-online/service/313471/Relaxation-Massage',
+  'https://miellewellness.noterro.com/book-online/service/313490/Deep-Therapeutic-Massage',
+  'https://miellewellness.noterro.com/book-online/service/313529/Cupping-Therapy',
+  'https://miellewellness.noterro.com/book-online/service/313570/Hot-Stone-Massage',
+  'https://miellewellness.noterro.com/book-online/service/313531/Youth-Massage-(3-12years-old)',
+  'https://miellewellness.noterro.com/book-online/service/313681/Pre-Natal-Massage-(15weeks-above)',
+  'https://miellewellness.noterro.com/book-online/service/313532/Thai-Massage-on-Bed',
+  'https://miellewellness.noterro.com/',
+]
+await page.addInitScript(() => {
+  window.bookingDestinations = []
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a.treatment-booking')
+    if (link) { event.preventDefault(); window.bookingDestinations.push(link.href) }
+  }, true)
+})
 const visit = async (path = '/services') => page.goto(`http://localhost:5173${path}`, { waitUntil: 'networkidle' })
 
 try {
@@ -35,17 +54,18 @@ try {
     assert.ok(Math.abs(rects[6].left - rects[0].left) < 2)
     const heading = await page.locator('h1').boundingBox()
     assert.ok(heading.y > (await page.locator('header').boundingBox()).height)
-    if ([375, 1900].includes(width)) await page.screenshot({ path: `test-results/services-${width}.png`, fullPage: true })
-    evidence.push(`${width}px: eight original photos load; ${columns}-column gallery, exact treatment labels, header clearance, dark contact/footer and no overflow`)
+    if ([375, 1900].includes(width)) await page.screenshot({ path: `test-results/services-${width}.png`, fullPage: true, animations: 'disabled', timeout: 60000 })
+    evidence.push(`${width}px: eight treatment photos load; ${columns}-column gallery, exact treatment labels, header clearance, dark contact/footer and no overflow`)
   }
 
   for (const [index, title] of titles.entries()) {
     const card = page.locator('.treatment-booking').nth(index)
-    await card.click()
-    await expect(page.getByRole('dialog')).toBeVisible()
-    await expect(page.getByRole('dialog').getByRole('heading')).toHaveText(title)
-    await expect(page.getByRole('dialog').getByRole('link', { name: 'Book In-Clinic' })).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
-    await page.keyboard.press('Escape')
+    await expect(card).toHaveAttribute('href', destinations[index])
+    await expect(card).toHaveAttribute('aria-label', `Book ${title}`)
+    await card.focus()
+    await page.keyboard.press('Enter')
+    assert.equal(await page.evaluate(() => window.bookingDestinations.at(-1)), destinations[index])
+    await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(card).toBeFocused()
   }
   const book = page.getByRole('button', { name: 'BOOK NOW', exact: true })
@@ -61,14 +81,26 @@ try {
   await page.locator('#contact-email').fill('visitor@example.com')
   await page.locator('#message').fill('Services enquiry')
   await page.getByRole('button', { name: 'SEND', exact: true }).click()
-  await expect(page.getByRole('link', { name: 'Open email to send', exact: true })).toHaveAttribute('href', /mailto:miellewellness@gmail.com/)
-  await page.locator('#newsletter-email').fill('visitor@example.com')
-  await page.getByRole('button', { name: 'Subscribe', exact: true }).click()
-  await expect(page.locator('.newsletter .form-error')).toBeVisible()
-  await page.getByRole('checkbox').check()
-  await page.getByRole('button', { name: 'Subscribe', exact: true }).click()
-  await expect(page.getByRole('link', { name: 'Open email to complete your subscription' })).toBeVisible()
-  evidence.push('All eight treatments and keyboard Book Now open booking with correct titles and destinations; Escape restores focus; contact validation/draft and newsletter consent/draft work')
+  await expect(page.locator('.contact-form .form-feedback')).toContainText('Your message has been submitted.')
+  await expect(page.locator('.site-footer form')).toHaveCount(0)
+  evidence.push('All eight treatment links activate the exact requested Noterro URLs by keyboard; outgoing navigation is intercepted. General Book Now retains booking/Escape/focus; contact validation/direct FormSubmit submission works; footer subscription form is removed')
+
+  for (const [path, prices] of [['/in-clinic', [70, 70, 80, 135, 70, 90, 90, 80]], ['/mobile-service', [100, 100, 110, 165, 100, 120, 120, 110]]]) {
+    for (const width of [375, 768, 1440]) {
+      await page.setViewportSize({ width, height: 1000 })
+      await visit(path)
+      assert.deepEqual(await page.locator('.treatment-booking').evaluateAll(links => links.map(link => link.href)), destinations)
+      assert.deepEqual(await page.locator('.treatment-price').allTextContents(), prices.map(price => `Starting at $${price}`))
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      for (const [index, card] of (await page.locator('.treatment-booking').all()).entries()) {
+        await card.focus()
+        await page.keyboard.press('Enter')
+        assert.equal(await page.evaluate(() => window.bookingDestinations.at(-1)), destinations[index])
+      }
+      evidence.push(`${path} at ${width}px: all eight exact booking destinations activate by keyboard; starting prices and overflow checks pass`)
+    }
+  }
+  await page.setViewportSize({ width: 1900, height: 1000 })
 
   await visit('/services/')
   await page.reload()
@@ -83,7 +115,7 @@ try {
     await expect(page).toHaveTitle('Services | Mielle Wellness')
   }
   await page.locator('.desktop-nav').getByRole('link', { name: 'DIRECT BILLING', exact: true }).click()
-  await page.waitForURL('**/#direct-billing')
+  await page.waitForURL('**/direct-billing')
   await page.locator('.footer-navigation').getByRole('link', { name: 'Services', exact: true }).click()
   await page.waitForURL('**/services')
   await page.setViewportSize({ width: 375, height: 812 })
@@ -94,8 +126,8 @@ try {
   await expect(page.locator('.mobile-nav')).toHaveCount(0)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.locator('.treatment-booking').last().click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await page.keyboard.press('Escape')
+  assert.equal(await page.evaluate(() => window.bookingDestinations.at(-1)), destinations.at(-1))
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.locator('.skip-link').focus()
   await page.keyboard.press('Enter')
   await expect(page.locator('#main')).toBeFocused()

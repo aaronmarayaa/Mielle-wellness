@@ -36,8 +36,18 @@ try {
     assert.ok(Math.abs(stars.midpoint - width / 2) < 1)
     const bounds = await section.locator('.reviews-top h2, .review-arrow').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().toJSON()))
     assert.ok(bounds[0].right <= bounds[1].left)
+    const headingSize = await section.getByRole('heading').evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+    const messageSize = await current.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+    assert.ok(messageSize >= 24 && messageSize <= 40)
+    assert.ok(headingSize < messageSize)
     assert.ok(bounds.slice(1).every(rect => rect.width >= 44 && rect.height >= 44 && rect.right <= width))
     const height = (await section.boundingBox()).height
+    await section.evaluate(el => {
+      window.reviewTransitions = []
+      el.addEventListener('transitionrun', event => {
+        if (event.propertyName === 'opacity' && event.target.matches('.review-stage blockquote')) window.reviewTransitions.push(event.target.getAttribute('aria-hidden'))
+      })
+    })
 
     for (let index = 0; index < reviews.length; index++) {
       await expect(current).toHaveCount(1)
@@ -47,12 +57,18 @@ try {
       assert.ok(reviews.filter((_, other) => index !== other).every(review => !snapshot.includes(review)))
       assert.ok(Math.abs((await section.boundingBox()).height - height) < 1)
       await next.click()
+      await expect.poll(() => section.evaluate(() => window.reviewTransitions.length)).toBeGreaterThanOrEqual((index + 1) * 2)
+      await section.locator('blockquote').evaluateAll(elements => Promise.all(elements.flatMap(el => el.getAnimations().map(animation => animation.finished.catch(() => undefined)))))
+      await expect(current).toHaveCSS('opacity', '1')
+      await expect(section.locator('blockquote[aria-hidden="true"]').first()).toHaveCSS('opacity', '0')
     }
     await expect(current).toHaveText(reviews[0])
     await previous.click()
     await expect(current).toHaveText(reviews[2])
+    await expect.poll(() => section.evaluate(() => window.reviewTransitions.length)).toBeGreaterThanOrEqual(8)
     await next.click()
     await expect(current).toHaveText(reviews[0])
+    await section.locator('blockquote').evaluateAll(elements => Promise.all(elements.flatMap(el => el.getAnimations().map(animation => animation.finished.catch(() => undefined)))))
     await next.focus()
     await page.keyboard.press('Shift+Tab')
     await expect(previous).toBeFocused()
@@ -62,6 +78,7 @@ try {
     await next.focus()
     await page.keyboard.press('Space')
     await expect(current).toHaveText(reviews[0])
+    await section.locator('blockquote').evaluateAll(elements => Promise.all(elements.flatMap(el => el.getAnimations().map(animation => animation.finished.catch(() => undefined)))))
 
     const contrast = await section.evaluate(el => {
       const luminance = color => color.match(/\d+/g).slice(0, 3).map(Number).map(v => v / 255)
@@ -69,8 +86,10 @@ try {
         .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0)
       const background = luminance(getComputedStyle(el).backgroundColor)
       return [...el.querySelectorAll('h2,.review-stars,blockquote[aria-hidden="false"],.review-arrow')].map(text => {
-        const foreground = luminance(getComputedStyle(text).color)
-        return (Math.max(background, foreground) + .05) / (Math.min(background, foreground) + .05)
+        const style = getComputedStyle(text)
+        const foreground = luminance(style.color)
+        const surface = style.backgroundColor === 'rgba(0, 0, 0, 0)' ? background : luminance(style.backgroundColor)
+        return (Math.max(surface, foreground) + .05) / (Math.min(surface, foreground) + .05)
       })
     })
     assert.ok(contrast.every(ratio => ratio >= 4.5))
@@ -81,14 +100,17 @@ try {
       await section.screenshot({ path: `test-results/reviews-${width}.png` })
       await capture.evaluate(el => el.remove())
     }
-    evidence.push(`${width}px: five centered ${stars.size}px stars, three exact supplied quotations, only active review exposed, next/previous wrap, stable height, 44px controls, Enter/Space/focus, no overflow, and ${Math.min(...contrast).toFixed(2)}:1 contrast`)
+    evidence.push(`${width}px: ${messageSize}px testimonial message larger than ${headingSize}px heading, five centered ${stars.size}px stars, three exact supplied quotations, only active review exposed, actual outgoing/incoming opacity transitions for Next and Previous, both wraps, stable height, 44px controls, Enter/Space/focus, no overflow, and ${Math.min(...contrast).toFixed(2)}:1 contrast`)
   }
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await next.click()
   await expect(current).toHaveText(reviews[1])
   await previous.click()
   await expect(current).toHaveText(reviews[0])
-  evidence.push('Reduced motion retains working manual review controls; no automatic slide changes or excerpt labels')
+  await expect(current).toHaveCSS('transition-duration', '0s')
+  await expect(current).toHaveCSS('opacity', '1')
+  assert.equal(await current.evaluate(el => el.getAnimations().length), 0)
+  evidence.push('Reduced motion switches reviews immediately without animations; manual controls remain usable and no automatic slide changes or excerpt labels are introduced')
   assert.equal(await page.locator('.review-note').count(), 0)
   assert.deepEqual(errors, [])
   await writeFile('test-results/reviews-check.json', JSON.stringify({ evidence, errors }, null, 2))

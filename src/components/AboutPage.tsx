@@ -49,16 +49,22 @@ export function AboutPage() {
     let frame = 0
     let active = true
     let tops: number[] = []
+    let progressValues: number[] = []
 
     const update = () => {
       frame = 0
       if (preference.matches) return
-      cards.forEach((card, index) => {
+      const nextProgress = cards.map((_, index) => {
         const next = cards[index + 1] || contact
         const targetTop = tops[index + 1] ?? header.offsetHeight
         const progress = (innerHeight - next.getBoundingClientRect().top) / Math.max(1, innerHeight - targetTop)
-        card.style.setProperty('--herb-progress', String(Math.max(0, Math.min(1, progress))))
+        return Math.round(Math.max(0, Math.min(1, progress)) * 1000) / 1000
       })
+      cards.forEach((card, index) => {
+        if (nextProgress[index] === progressValues[index]) return
+        card.style.setProperty('--herb-progress', String(nextProgress[index]))
+      })
+      progressValues = nextProgress
     }
     const schedule = () => { if (active && !frame) frame = requestAnimationFrame(update) }
     const configure = () => {
@@ -77,6 +83,7 @@ export function AboutPage() {
         return offset
       })
       cards.forEach(card => card.style.setProperty('--herb-progress', '0'))
+      progressValues = cards.map(() => 0)
       if (!preference.matches) window.addEventListener('scroll', schedule, { passive: true })
       schedule()
     }

@@ -1,3 +1,4 @@
+import { mockContact } from './mock-contact.mjs'
 import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -5,12 +6,15 @@ import { mkdir, writeFile } from 'node:fs/promises'
 await mkdir('test-results', { recursive: true })
 const browser = await chromium.launch({ channel: 'chrome' })
 const page = await browser.newPage({ reducedMotion: 'reduce' })
+await mockContact(page)
 const evidence = [], errors = []
 page.on('pageerror', error => errors.push(error.message))
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
 const prices = [100, 100, 110, 165, 100, 120, 120, 110].map(price => `Starting at $${price}`)
 
 try {
+  await page.goto('http://localhost:5173/services', { waitUntil: 'networkidle' })
+  const destinations = await page.locator('.treatment-booking').evaluateAll(links => links.map(link => link.href))
   for (const width of [320, 375, 768, 1024, 1280, 1900]) {
     await page.setViewportSize({ width, height: 1000 })
     await page.goto('http://localhost:5173/mobile-service', { waitUntil: 'networkidle' })
@@ -25,10 +29,11 @@ try {
     assert.deepEqual(await page.locator('.treatment-price').allTextContents(), prices)
     await expect(page.locator('.treatment-card')).toHaveCount(8)
     await expect(page.locator('.services-submenu a[aria-current="page"]').first()).toHaveAttribute('href', '/mobile-service')
-    for (const link of await page.locator('.treatment-booking, .services-booking').all()) {
-      await expect(link).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
+    for (const [index, link] of (await page.locator('.treatment-booking').all()).entries()) {
+      await expect(link).toHaveAttribute('href', destinations[index])
       await expect(link).toHaveAttribute('target', '_blank')
     }
+    await expect(page.locator('.services-booking')).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
     const boxes = await page.locator('.treatment-card').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().toJSON()))
     const columns = width >= 960 ? 3 : width >= 620 ? 2 : 1
     assert.ok(Math.abs(boxes[0].top - boxes[columns - 1].top) < 2)
@@ -69,8 +74,9 @@ try {
   assert.equal(await page.locator('#first-name').evaluate(el => el.validity.valueMissing), true)
   await page.locator('#first-name').fill('Test')
   await page.locator('#contact-email').fill('visitor@example.com')
+  await page.locator('#message').fill('Mobile services enquiry')
   await page.getByRole('button', { name: 'SEND', exact: true }).click()
-  await expect(page.getByRole('link', { name: 'Open email to send', exact: true })).toHaveAttribute('href', /mailto:miellewellness@gmail.com/)
+  await expect(page.locator('.contact-form .form-feedback')).toContainText('Your message has been submitted.')
   const phone = await browser.newPage({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' })
   await phone.goto('http://localhost:5173/in-clinic', { waitUntil: 'networkidle' })
   await phone.getByRole('button', { name: 'Menu', exact: true }).tap()
@@ -80,7 +86,7 @@ try {
   await expect(phone.locator('h1')).toHaveText('Mobile Services')
   await expect(phone.locator('.mobile-nav')).toHaveCount(0)
   await phone.close()
-  evidence.push('Desktop and touch dropdown navigation, distinct clinic/mobile pricing, history, refresh/trailing slash, light entrance, contained hover zoom without underlines, reduced motion and contact validation/draft pass')
+  evidence.push('Desktop and touch dropdown navigation, distinct clinic/mobile pricing, history, refresh/trailing slash, light entrance, contained hover zoom without underlines, reduced motion and contact validation/direct FormSubmit submission pass')
   assert.deepEqual(errors, [])
   await writeFile('test-results/mobile-services-check.json', JSON.stringify({ evidence, errors }, null, 2))
   console.log(evidence.join('\n'))

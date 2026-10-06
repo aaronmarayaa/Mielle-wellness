@@ -1,14 +1,25 @@
 import { Button } from './ui/button'
 
 const treatments = [
-  { title: 'Relaxation Massage', price: 70, mobilePrice: 100, image: 'service-relaxation.jpg', alt: 'A client resting during a relaxation massage' },
-  { title: 'Deep Tissue Therapeutic Massage', price: 70, mobilePrice: 100, image: 'service-deep-tissue.jpg', alt: 'A therapist applying focused pressure to a client’s back' },
-  { title: 'Cupping Therapy', price: 80, mobilePrice: 110, image: 'service-cupping.jpg', alt: 'Glass cups being placed on a client’s back' },
-  { title: 'Hot Stone Massage Therapy', price: 135, mobilePrice: 165, image: 'service-hot-stone.jpg', alt: 'Smooth heated stones arranged on a client’s back' },
-  { title: 'Youth Massage (16 years old under)', price: 70, mobilePrice: 100, image: 'service-youth.jpg', alt: 'A therapist gently supporting a client’s head during a massage' },
-  { title: 'Pre-Natal Massage (15weeks above)', price: 90, mobilePrice: 120, image: 'service-prenatal.jpg', alt: 'A client lying on their side during a prenatal massage' },
-  { title: 'Thai Massage Therapy (on Bed)', price: 90, mobilePrice: 120, image: 'service-thai.jpg', alt: 'A therapist guiding a client through an assisted Thai massage stretch' },
-  { title: 'Lymphatic Drainage Massage', price: 80, mobilePrice: 110, image: 'service-lymphatic.jpg', alt: 'Hands applying gentle massage strokes to a client’s back' },
+  { title: 'Relaxation Massage', price: 70, mobilePrice: 100, image: 'services/relaxation.jpg', width: 6852, height: 4708, alt: 'A client resting during a relaxation massage' },
+  { title: 'Deep Tissue Therapeutic Massage', price: 70, mobilePrice: 100, image: 'services/deep-tiissue-therapeutic.jpg', width: 5472, height: 3648, alt: 'A therapist applying focused pressure to a client’s back' },
+  { title: 'Cupping Therapy', price: 80, mobilePrice: 110, image: 'services/cupping-therapy.jpg', width: 6048, height: 4024, alt: 'Glass cups being placed on a client’s back' },
+  { title: 'Hot Stone Massage Therapy', price: 135, mobilePrice: 165, image: 'services/hot-stone.jpg', width: 6720, height: 4480, alt: 'A therapist massaging a client’s back with smooth heated stones' },
+  { title: 'Youth Massage (16 years old under)', price: 70, mobilePrice: 100, image: 'services/youth.jpg', width: 4227, height: 3382, alt: 'A therapist gently massaging a child lying fully clothed on a treatment table' },
+  { title: 'Pre-Natal Massage (15weeks above)', price: 90, mobilePrice: 120, image: 'services/pre-natal.jpg', width: 736, height: 414, alt: 'A therapist gently massaging a pregnant client’s abdomen' },
+  { title: 'Thai Massage Therapy (on Bed)', price: 90, mobilePrice: 120, image: 'services/thai-massage.jpg', width: 6000, height: 4000, alt: 'A therapist guiding a client through an assisted Thai massage stretch' },
+  { title: 'Lymphatic Drainage Massage', price: 80, mobilePrice: 110, image: 'services/lymphatic.jpg', width: 5760, height: 3832, alt: 'A therapist gently massaging a client’s abdomen between white towels' },
+]
+
+const treatmentBookingLinks = [
+  'https://miellewellness.noterro.com/book-online/service/313471/Relaxation-Massage',
+  'https://miellewellness.noterro.com/book-online/service/313490/Deep-Therapeutic-Massage',
+  'https://miellewellness.noterro.com/book-online/service/313529/Cupping-Therapy',
+  'https://miellewellness.noterro.com/book-online/service/313570/Hot-Stone-Massage',
+  'https://miellewellness.noterro.com/book-online/service/313531/Youth-Massage-(3-12years-old)',
+  'https://miellewellness.noterro.com/book-online/service/313681/Pre-Natal-Massage-(15weeks-above)',
+  'https://miellewellness.noterro.com/book-online/service/313532/Thai-Massage-on-Bed',
+  'https://miellewellness.noterro.com/',
 ]
 
 const servicePages = {
@@ -25,15 +36,15 @@ export function ServicesPage({ onBook, variant = 'overview' }: { onBook: (treatm
       {details ? <Button className="services-booking" size="lg" asChild><a href="https://miellewellness.noterro.com/" target="_blank" rel="noreferrer">BOOK NOW</a></Button> : <Button className="services-booking" size="lg" onClick={() => onBook()}>BOOK NOW</Button>}
     </section>
     <section className="treatment-gallery" aria-label="Signature treatments">
-      {treatments.map(treatment => {
+      {treatments.map((treatment, index) => {
         const price = variant === 'mobile' ? treatment.mobilePrice : treatment.price
         const content = <>
-          <span className="treatment-image"><img src={`/assets/${treatment.image}`} alt={treatment.alt} width="640" height="640" loading="lazy" /></span>
+          <span className="treatment-image"><img src={`/assets/${treatment.image}`} alt={treatment.alt} width={treatment.width} height={treatment.height} loading="lazy" /></span>
           <h2>{treatment.title}</h2>
           {details && <p className="treatment-price">Starting at ${price}</p>}
         </>
         return <article className="treatment-card" key={treatment.image}>
-          {details ? <a className="treatment-booking" href="https://miellewellness.noterro.com/" target="_blank" rel="noreferrer" aria-label={`Book ${treatment.title}, starting at $${price}`}>{content}</a> : <button className="treatment-booking" onClick={() => onBook(treatment.title)} aria-label={`Book ${treatment.title}`}>{content}</button>}
+          <a className="treatment-booking" href={treatmentBookingLinks[index]} target="_blank" rel="noreferrer" aria-label={`Book ${treatment.title}${details ? `, starting at $${price}` : ''}`}>{content}</a>
         </article>
       })}
     </section>

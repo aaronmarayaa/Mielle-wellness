@@ -14,6 +14,8 @@ const prices = [70, 70, 80, 135, 70, 90, 90, 80].map(price => `Starting at $${pr
 const choices = ['In-Clinic Services', 'Mobile Services', 'Skin Treatment']
 
 try {
+  await visit('/services')
+  const destinations = await page.locator('.treatment-booking').evaluateAll(links => links.map(link => link.href))
   for (const width of [320, 375, 768, 1024, 1280, 1900]) {
     await page.setViewportSize({ width, height: 1000 })
     await visit('/in-clinic')
@@ -27,10 +29,11 @@ try {
     await expect(page.locator('.services-page-intro p')).toHaveText('Treat yourself to a calming escape in a warm and welcoming space created for your comfort. Relax away from home, release tension, and enjoy a moment of peace just for you.')
     assert.deepEqual(await page.locator('.treatment-price').allTextContents(), prices)
     await expect(page.locator('.treatment-gallery a')).toHaveCount(8)
-    for (const link of await page.locator('.treatment-gallery a, .services-booking').all()) {
-      await expect(link).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
+    for (const [index, link] of (await page.locator('.treatment-gallery a').all()).entries()) {
+      await expect(link).toHaveAttribute('href', destinations[index])
       await expect(link).toHaveAttribute('target', '_blank')
     }
+    await expect(page.locator('.services-booking')).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
     await expect(page.locator('#contact')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     await expect(page.locator('footer')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
@@ -86,7 +89,7 @@ try {
   await expect(submenu).toBeHidden()
   await nav.getByRole('link', { name: 'SERVICES', exact: true }).hover()
   await expect(submenu.getByRole('link', { name: 'Mobile Services' })).toHaveAttribute('href', '/mobile-service')
-  await expect(submenu.getByRole('link', { name: 'Skin Treatment' })).toHaveAttribute('href', 'https://www.miellewellness.ca/skin-treatment')
+  await expect(submenu.getByRole('link', { name: 'Skin Treatment' })).toHaveAttribute('href', '/skin-treatment')
   await submenu.getByRole('link', { name: 'In-Clinic Services', exact: true }).click()
   await expect(page).toHaveURL('http://localhost:5173/in-clinic')
   await visit('/in-clinic/')

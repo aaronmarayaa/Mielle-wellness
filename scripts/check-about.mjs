@@ -1,3 +1,4 @@
+import { mockContact } from './mock-contact.mjs'
 import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -5,6 +6,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 await mkdir('test-results', { recursive: true })
 const browser = await chromium.launch({ channel: 'chrome' })
 const page = await browser.newPage({ reducedMotion: 'reduce' })
+await mockContact(page)
 const evidence = [], errors = []
 page.on('pageerror', error => errors.push(error.message))
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
@@ -83,10 +85,9 @@ try {
   await page.locator('.desktop-nav').getByRole('link', { name: 'CONTACT', exact: true }).click()
   await page.waitForURL('**/about#contact')
   await expect(page.getByRole('heading', { name: 'Contact Us', exact: true })).toBeVisible()
-  await page.locator('.header-booking').click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(page.locator('.header-booking')).toBeFocused()
+  const bookingControl = page.locator('.footer-navigation').getByRole('link', { name: 'Booking', exact: true })
+  await expect(bookingControl).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
+  await expect(bookingControl).toHaveAttribute('target', '_blank')
   await page.locator('.desktop-nav').getByRole('button', { name: 'PROMOS', exact: true }).click()
   await expect(page.getByRole('dialog').getByRole('heading')).toContainText('10% Off Your First')
   await page.keyboard.press('Escape')
@@ -96,17 +97,12 @@ try {
   await page.locator('#contact-email').fill('visitor@example.com')
   await page.locator('#message').fill('About page enquiry')
   await page.getByRole('button', { name: 'SEND', exact: true }).click()
-  await expect(page.getByRole('link', { name: 'Open email to send', exact: true })).toHaveAttribute('href', /mailto:miellewellness@gmail.com/)
-  await page.locator('#newsletter-email').fill('visitor@example.com')
-  await page.getByRole('button', { name: 'Subscribe', exact: true }).click()
-  await expect(page.locator('.newsletter .form-error')).toBeVisible()
-  await page.getByRole('checkbox').check()
-  await page.getByRole('button', { name: 'Subscribe', exact: true }).click()
-  await expect(page.getByRole('link', { name: 'Open email to complete your subscription' })).toBeVisible()
+  await expect(page.locator('.contact-form .form-feedback')).toContainText('Your message has been submitted.')
+  await expect(page.locator('.site-footer form')).toHaveCount(0)
   for (const [label, hash] of [['Home', 'home'], ['Services', 'services'], ['Reviews', 'reviews']]) {
     assert.equal(await page.locator('.footer-navigation').getByRole('link', { name: label, exact: true }).getAttribute('href'), hash === 'services' ? '/services' : `/#${hash}`)
   }
-  evidence.push('Refresh, trailing slash, desktop About link, browser back/forward, cross-page section links, local Contact, booking/Escape/focus, Promos, contact validation/email draft, newsletter consent/draft, and footer links pass')
+  evidence.push('Refresh, trailing slash, desktop About link, browser back/forward, cross-page section links, local Contact, booking/Escape/focus, Promos, contact validation/direct FormSubmit submission, and footer links pass; footer subscription form is removed')
 
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' })

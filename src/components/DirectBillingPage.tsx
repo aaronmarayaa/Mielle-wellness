@@ -28,7 +28,7 @@ export function DirectBillingPage({ insurers }: { insurers: readonly Insurer[] }
 
   return <div className="direct-billing-page">
     <section className="direct-billing-hero" aria-labelledby="direct-billing-title">
-      <img src="/assets/direct-billing-hero.jpg" alt="Hot stone massage treatment" />
+      <img src="/assets/direct-billing-massage.jpg" alt="A therapist massaging a client's lower back" width="5472" height="3648" fetchPriority="high" />
       <div className="direct-billing-hero-overlay" />
       <div className="direct-billing-hero-copy">
         <h1 id="direct-billing-title">DIRECT BILLING</h1>
