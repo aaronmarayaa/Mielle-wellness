@@ -34,7 +34,7 @@ try {
       await expect(link).toHaveAttribute('target', '_blank')
     }
     await expect(page.locator('.services-booking')).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
-    await expect(page.locator('#contact')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    await expect(page.locator('#contact')).toHaveCount(0)
     await expect(page.locator('footer')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     const cards = await page.locator('.treatment-card').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().toJSON()))
@@ -62,7 +62,7 @@ try {
       await page.mouse.move(width - 10, 300)
       await expect(submenu).toBeHidden()
     }
-    evidence.push(`${width}px: exact In-Clinic copy/prices, eight loaded treatment images and booking links, ${columns}-column layout, dark contact/footer, no overflow${width >= 1280 ? ', three hover choices remain reachable inside the viewport' : ''}`)
+    evidence.push(`${width}px: exact In-Clinic copy/prices, eight loaded treatment images and booking links, ${columns}-column layout, no contact block, black footer, no overflow${width >= 1280 ? ', three hover choices remain reachable inside the viewport' : ''}`)
   }
 
   const nav = page.locator('.desktop-nav')

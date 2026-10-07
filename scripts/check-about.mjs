@@ -46,7 +46,8 @@ try {
     const heading = await page.locator('#about-page-title').boundingBox()
     assert.ok(heading.y >= (await page.locator('.site-header').boundingBox()).height)
     assert.deepEqual(await page.locator('.about-difference h2').allTextContents(), ['1. An Exceptional Team of Experts', '2. The Latest Treatments and Technology', '3. Proven Results'])
-    const contrast = await page.locator('.about-page-intro,.about-team,.about-difference,.about-contact').evaluateAll(sections => {
+    await expect(page.locator('#contact')).toHaveCount(0)
+    const contrast = await page.locator('.about-page-intro,.about-team,.about-difference').evaluateAll(sections => {
       const luminance = color => color.match(/\d+/g).slice(0, 3).map(Number).map(v => v / 255)
         .map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
         .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0)
@@ -78,19 +79,16 @@ try {
   for (const [label, hash] of [['HOME', 'home'], ['SERVICES', 'services'], ['DIRECT BILLING', 'direct-billing']]) {
     await page.goto('http://localhost:5173/about', { waitUntil: 'networkidle' })
     await page.locator('.desktop-nav').getByRole('link', { name: label, exact: true }).click()
-    await page.waitForURL(hash === 'services' ? '**/services' : `**/#${hash}`)
-    await expect(page.locator(hash === 'services' ? '.treatment-gallery' : `#${hash}`)).toBeVisible()
+    await page.waitForURL(hash === 'services' || hash === 'direct-billing' ? `**/${hash}` : `**/#${hash}`)
+    await expect(page.locator(hash === 'services' ? '.treatment-gallery' : hash === 'direct-billing' ? '.direct-billing-page' : `#${hash}`)).toBeVisible()
   }
   await page.goto('http://localhost:5173/about', { waitUntil: 'networkidle' })
   await page.locator('.desktop-nav').getByRole('link', { name: 'CONTACT', exact: true }).click()
-  await page.waitForURL('**/about#contact')
-  await expect(page.getByRole('heading', { name: 'Contact Us', exact: true })).toBeVisible()
+  await page.waitForURL('**/#contact')
+  await expect(page.locator('.contact-heading h1')).toBeInViewport()
   const bookingControl = page.locator('.footer-navigation').getByRole('link', { name: 'Booking', exact: true })
   await expect(bookingControl).toHaveAttribute('href', 'https://miellewellness.noterro.com/')
   await expect(bookingControl).toHaveAttribute('target', '_blank')
-  await page.locator('.desktop-nav').getByRole('button', { name: 'PROMOS', exact: true }).click()
-  await expect(page.getByRole('dialog').getByRole('heading')).toContainText('10% Off Your First')
-  await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'SEND', exact: true }).click()
   assert.equal(await page.locator('#first-name').evaluate(el => el.validity.valueMissing), true)
   await page.locator('#first-name').fill('Test')
@@ -100,9 +98,9 @@ try {
   await expect(page.locator('.contact-form .form-feedback')).toContainText('Your message has been submitted.')
   await expect(page.locator('.site-footer form')).toHaveCount(0)
   for (const [label, hash] of [['Home', 'home'], ['Services', 'services'], ['Reviews', 'reviews']]) {
-    assert.equal(await page.locator('.footer-navigation').getByRole('link', { name: label, exact: true }).getAttribute('href'), hash === 'services' ? '/services' : `/#${hash}`)
+    assert.equal(await page.locator('.footer-navigation').getByRole('link', { name: label, exact: true }).getAttribute('href'), hash === 'services' ? '/services' : hash === 'reviews' ? '/#reviews' : `#${hash}`)
   }
-  evidence.push('Refresh, trailing slash, desktop About link, browser back/forward, cross-page section links, local Contact, booking/Escape/focus, Promos, contact validation/direct FormSubmit submission, and footer links pass; footer subscription form is removed')
+  evidence.push('Refresh, trailing slash, desktop About link, browser back/forward, cross-page section links, Contact reaches Home, contact validation/mocked FormSubmit submission and footer links pass; footer subscription form is removed')
 
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
@@ -121,7 +119,9 @@ try {
   await expect(page.locator('.mobile-nav')).toHaveCount(0)
   await page.goto('http://localhost:5173/about', { waitUntil: 'networkidle' })
   await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await page.locator('#contact').scrollIntoViewIfNeeded()
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page.locator('.mobile-nav').getByRole('link', { name: 'CONTACT', exact: true }).click()
+  await page.waitForURL('**/#contact')
   await expect(page.getByRole('button', { name: 'SEND', exact: true })).toBeVisible()
   await page.locator('.skip-link').focus()
   await page.keyboard.press('Enter')

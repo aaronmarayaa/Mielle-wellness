@@ -42,9 +42,9 @@ export function AboutPage() {
   useEffect(() => {
     const main = document.querySelector<HTMLElement>('.about-page')
     const cards = [...document.querySelectorAll<HTMLElement>('.about-difference')]
-    const contact = document.querySelector<HTMLElement>('.about-contact')
+    const footer = document.querySelector<HTMLElement>('.site-footer')
     const header = document.querySelector<HTMLElement>('.site-header')
-    if (!main || !contact || !header || cards.length !== 3) return
+    if (!main || !footer || !header || cards.length !== 3) return
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
     let frame = 0
     let active = true
@@ -55,8 +55,8 @@ export function AboutPage() {
       frame = 0
       if (preference.matches) return
       const nextProgress = cards.map((_, index) => {
-        const next = cards[index + 1] || contact
-        const targetTop = tops[index + 1] ?? header.offsetHeight
+        const next = cards[index + 1] || footer
+        const targetTop = tops[index + 1] ?? Math.max(header.offsetHeight, innerHeight - footer.offsetHeight)
         const progress = (innerHeight - next.getBoundingClientRect().top) / Math.max(1, innerHeight - targetTop)
         return Math.round(Math.max(0, Math.min(1, progress)) * 1000) / 1000
       })

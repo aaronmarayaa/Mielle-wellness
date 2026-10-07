@@ -44,7 +44,7 @@ try {
     assert.deepEqual(await page.locator('.treatment-card h2').allTextContents(), titles)
     await expect(page.locator('.desktop-nav a[aria-current="page"]')).toHaveAttribute('href', '/services')
     await expect(page.locator('.site-header')).toHaveClass(/is-solid/)
-    await expect(page.locator('#contact')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    await expect(page.locator('#contact')).toHaveCount(0)
     await expect(page.locator('footer')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     const rects = await page.locator('.treatment-card').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().toJSON()))
@@ -55,7 +55,7 @@ try {
     const heading = await page.locator('h1').boundingBox()
     assert.ok(heading.y > (await page.locator('header').boundingBox()).height)
     if ([375, 1900].includes(width)) await page.screenshot({ path: `test-results/services-${width}.png`, fullPage: true, animations: 'disabled', timeout: 60000 })
-    evidence.push(`${width}px: eight treatment photos load; ${columns}-column gallery, exact treatment labels, header clearance, dark contact/footer and no overflow`)
+    evidence.push(`${width}px: eight treatment photos load; ${columns}-column gallery, exact treatment labels, header clearance, no contact block, black footer and no overflow`)
   }
 
   for (const [index, title] of titles.entries()) {
@@ -75,6 +75,7 @@ try {
   await page.keyboard.press('Escape')
   await expect(book).toBeFocused()
   await page.locator('.desktop-nav').getByRole('link', { name: 'CONTACT', exact: true }).click()
+  await page.waitForURL('**/#contact')
   await page.getByRole('button', { name: 'SEND', exact: true }).click()
   assert.equal(await page.locator('#first-name').evaluate(el => el.validity.valueMissing), true)
   await page.locator('#first-name').fill('Test')

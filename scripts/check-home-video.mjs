@@ -22,6 +22,10 @@ try {
     assert.deepEqual([metadata.width, metadata.height], [854, 480])
     assert.ok(Math.abs(metadata.duration - 17.368) < .1)
     await page.evaluate(() => document.fonts.ready)
+    const menuIntro = page.locator('.services-intro')
+    await expect(menuIntro).toHaveCSS('opacity', '0')
+    await expect(menuIntro).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 8)')
+    await expect(menuIntro).toHaveCSS('transition-duration', '0.35s, 0.35s')
     await expect(page.locator('.hero-content')).toHaveCSS('opacity', '1')
     await expect(page.locator('.hero-description')).toHaveCSS('color', 'rgb(255, 255, 255)')
     for (const button of await page.locator('.hero-actions a').all()) {
@@ -60,11 +64,75 @@ try {
     await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), plateau[Math.floor(plateau.length / 2)])
     await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
     if ([375, 1900].includes(width)) await page.screenshot({ path: `test-results/offer-longer-${width}.png` })
+    const bookingTop = await page.locator('#booking-options').evaluate(el => scrollY + el.getBoundingClientRect().top)
+    for (const progress of [0, .25, .5, .75]) {
+      await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), bookingTop - height + height * progress)
+      await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
+      await expect(page.locator('.scroll-offer')).toHaveClass(/is-visible/)
+      if (progress > 0) {
+        await expect(page.locator('.site-header')).toHaveClass(/is-solid/)
+        await expect(page.locator('.site-header')).toHaveCSS('color', 'rgb(0, 0, 0)')
+      }
+      const stack = await page.evaluate(() => {
+        const stage = document.querySelector('.home-stage')
+        const note = document.getElementById('booking-options')
+        const edge = note.getBoundingClientRect().top
+        return {
+          stageTop: stage.getBoundingClientRect().top,
+          edge,
+          noteOnTop: edge >= innerHeight - 4 || note.contains(document.elementFromPoint(innerWidth / 2, edge + 4)),
+          offerBehind: stage.contains(document.elementFromPoint(innerWidth / 2, Math.min(innerHeight - 4, edge - 4))),
+        }
+      })
+      assert.ok(Math.abs(stack.stageTop) <= 1, `${width}px: offer stays pinned while note rises`)
+      assert.ok(Math.abs(stack.edge - height * (1 - progress)) <= 2)
+      assert.ok(stack.noteOnTop && stack.offerBehind, `${width}px: note covers the pinned offer at ${progress}`)
+      if ([375, 1900].includes(width) && progress === .5) {
+        await page.locator('#booking-options').evaluate(async section => {
+          await Promise.all(section.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {})))
+        })
+        await page.screenshot({ path: `test-results/home-note-stacking-${width}.png` })
+      }
+    }
+    await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), bookingTop)
+    await expect(page.locator('.scroll-offer')).not.toHaveClass(/is-visible/)
+    await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
+    assert.equal(await page.locator('.home-stage').evaluate(el => el.inert), true)
+    await expect(page.locator('.site-header')).toHaveClass(/is-solid/)
+    await expect(page.locator('.site-header')).toHaveCSS('color', 'rgb(0, 0, 0)')
+    const nextHeading = page.locator('.booking-intro h2')
+    await expect(nextHeading).toBeInViewport()
+    await expect.poll(() => nextHeading.evaluate(el => {
+      const rect = el.getBoundingClientRect()
+      return el.contains(document.elementFromPoint(rect.x + rect.width / 2, Math.min(innerHeight - 4, rect.y + rect.height / 2)))
+    })).toBe(true)
+    if ([375, 1900].includes(width)) {
+      await expect(page.locator('.booking-intro')).toHaveCSS('opacity', '1')
+      await page.locator('#booking-options').evaluate(async section => {
+        await Promise.all(section.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {})))
+      })
+      await page.screenshot({ path: `test-results/home-note-arrived-${width}.png` })
+    }
+    await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), plateau[Math.floor(plateau.length / 2)])
+    await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
+    await expect.poll(() => page.locator('.home-stage').evaluate(el => el.inert)).toBe(false)
+    await expect(page.locator('.site-header')).not.toHaveClass(/is-solid/)
     await page.evaluate(() => scrollTo({ top: document.getElementById('home').offsetHeight - innerHeight + 1, behavior: 'instant' }))
     await expect(page.locator('.scroll-offer')).not.toHaveClass(/is-visible/)
     await page.locator('#booking-options').scrollIntoViewIfNeeded()
     await expect(page.locator('#booking-options')).toBeInViewport()
+    await menuIntro.evaluate(el => scrollTo({ top: scrollY + el.getBoundingClientRect().top - innerHeight - 40, behavior: 'instant' }))
+    await expect(menuIntro).not.toHaveClass(/is-revealed/)
+    await menuIntro.evaluate(el => scrollTo({ top: scrollY + el.getBoundingClientRect().top - innerHeight + 80, behavior: 'instant' }))
+    await page.waitForFunction(() => {
+      const opacity = Number(getComputedStyle(document.querySelector('.services-intro')).opacity)
+      return opacity > 0 && opacity < 1
+    })
+    await expect(menuIntro).toHaveCSS('opacity', '1')
+    assert.ok(await menuIntro.evaluate(el => el.getBoundingClientRect().top < innerHeight), 'Treatment Menu visibly transitions after entering the viewport')
     await page.locator('#services').evaluate(el => el.scrollIntoView({ block: 'start', behavior: 'instant' }))
+    await expect(page.locator('.services-section > .botanical-backdrop')).toHaveCSS('transition-duration', '0.4s')
+    await expect(page.locator('.service-image').first()).toHaveCSS('transition-duration', '0.24s')
     await expect.poll(() => video.evaluate(el => el.paused)).toBe(true)
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }))
@@ -72,7 +140,7 @@ try {
     if ([375, 1900].includes(width)) {
       await page.screenshot({ path: `test-results/home-1006-${width}.png` })
     }
-    evidence.push(`${width}x${height}: supplied video autoplays muted/inline, pauses offscreen and resumes on return; offer holds fully visible for ${Math.round(hold)}px with ${blur}, keyboard link opens /services, normal scroll to next section, no overflow`)
+    evidence.push(`${width}x${height}: supplied video autoplays muted/inline, pauses offscreen and resumes on return; offer holds fully visible for ${Math.round(hold)}px with ${blur}, keyboard link opens /services; four checkpoints show A note from Mielle rising above the pinned, unfaded offer; covered offer becomes inert, navbar stays black, reverse restores offer; Treatment Menu visibly fades/slides on entry for 350ms/8px, with 400ms botanical fade and 240ms image hover; no overflow`)
   }
   await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
   const measurements = await page.evaluate(async () => {
@@ -91,12 +159,19 @@ try {
   await expect.poll(() => page.locator('video').evaluate(el => el.currentTime < 1)).toBe(true)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(page.locator('video.hero-background')).toHaveCount(0)
+  await expect(page.locator('.services-intro')).toHaveCSS('opacity', '1')
+  await expect(page.locator('.services-intro')).toHaveCSS('transform', 'none')
+  await expect(page.locator('.services-intro')).toHaveCSS('transition-duration', '0s')
   await expect(page.locator('img.hero-background')).toHaveAttribute('src', '/assets/home-1006-poster.jpg')
   await expect.poll(() => page.locator('img.hero-background').evaluate(el => el.complete && el.naturalWidth === 854)).toBe(true)
   await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
   await expect(page.locator('video.hero-background')).toHaveCount(0)
   await page.evaluate(() => scrollTo({ top: innerHeight, behavior: 'instant' }))
   await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
+  await page.locator('#booking-options').evaluate(el => scrollTo({ top: scrollY + el.getBoundingClientRect().top, behavior: 'instant' }))
+  await expect.poll(() => page.locator('.home-stage').evaluate(el => el.inert)).toBe(true)
+  await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
+  await expect(page.locator('.booking-intro h2')).toBeInViewport()
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await expect(page.locator('video.hero-background')).toHaveCount(1)
   await expect(page.locator('video.hero-background')).toHaveCSS('filter', 'none')

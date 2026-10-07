@@ -73,7 +73,10 @@ function ScrollOffer() {
   useEffect(() => {
     const home = document.getElementById('home')
     const element = offer.current
-    if (!home || !element) return
+    const stage = element?.parentElement
+    const hero = stage?.querySelector<HTMLElement>('.hero')
+    const header = document.querySelector<HTMLElement>('.site-header')
+    if (!home || !element || !stage || !hero || !header) return
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     let frame = 0
@@ -83,35 +86,34 @@ function ScrollOffer() {
     const update = () => {
       frame = 0
       const rect = home.getBoundingClientRect()
-      const viewport = Math.max(window.innerHeight, 1)
-      const travel = Math.max(rect.height - viewport, 1)
+      const stageHeight = stage.offsetHeight
+      // Reserve the final stage height for the next section to cover the offer.
+      const travel = Math.max(rect.height - stageHeight * 2, 1)
       const progress = Math.max(0, Math.min(1, -rect.top / travel))
 
-      // The hero stays pinned while the offer moves through three beats:
-      // reveal -> hold -> fade. Only after that does the next section arrive.
       const revealStart = .05
       const revealEnd = .16
-      const holdEnd = .72
-      const fadeEnd = .94
       let next = 0
 
       if (reducedMotion.matches) {
-        next = progress >= revealStart && progress < fadeEnd ? 1 : 0
+        next = progress >= revealStart ? 1 : 0
       } else if (progress >= revealStart && progress < revealEnd) {
         next = (progress - revealStart) / (revealEnd - revealStart)
-      } else if (progress >= revealEnd && progress <= holdEnd) {
+      } else if (progress >= revealEnd) {
         next = 1
-      } else if (progress > holdEnd && progress < fadeEnd) {
-        next = 1 - ((progress - holdEnd) / (fadeEnd - holdEnd))
       }
 
       next = Math.round(Math.max(0, Math.min(1, next)) * 1000) / 1000
-      if (next === opacity) return
+      const covered = rect.bottom - stageHeight <= header.offsetHeight
+      if (next === opacity && stage.inert === covered) return
+      if (next !== opacity) element.style.setProperty('--offer-opacity', String(next))
       opacity = next
-      const visible = next > .025
-      element.style.setProperty('--offer-opacity', String(next))
+      const visible = next > .025 && !covered
       element.classList.toggle('is-visible', visible)
       element.setAttribute('aria-hidden', String(!visible))
+      hero.inert = visible || covered
+      stage.inert = covered
+      stage.classList.toggle('is-covered', covered)
     }
     const schedule = () => { if (inView && !frame) frame = window.requestAnimationFrame(update) }
     const observer = 'IntersectionObserver' in window ? new IntersectionObserver(([entry]) => {
@@ -191,15 +193,15 @@ function App() {
       return
     }
     const sections = [...document.querySelectorAll<HTMLElement>('main [data-nav]')]
-    const header = document.querySelector<HTMLElement>('.site-header')
+    const stage = document.querySelector<HTMLElement>('.home-stage')
     let frame = 0
     let previousScrolled = false
     let previousSection = 'home'
     const update = () => {
       frame = 0
-      const headerHeight = header?.offsetHeight || 0
       const bounds = sections.map(section => section.getBoundingClientRect())
-      const nextScrolled = (bounds[0]?.bottom || 0) <= headerHeight
+      const homeBounds = bounds[0]
+      const nextScrolled = (homeBounds?.bottom || 0) - (stage?.offsetHeight || 0) <= window.innerHeight
       const nextSection = sections.filter((_, index) => bounds[index].top < window.innerHeight * .35).at(-1)?.id || 'home'
       if (nextScrolled !== previousScrolled) {
         previousScrolled = nextScrolled
@@ -225,24 +227,33 @@ function App() {
     const elements = [...document.querySelectorAll<HTMLElement>('[data-reveal]')]
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
     let observer: IntersectionObserver | undefined
+    let serviceObserver: IntersectionObserver | undefined
     const configure = () => {
       observer?.disconnect()
+      serviceObserver?.disconnect()
       elements.forEach(element => element.classList.remove('reveal-ready', 'is-revealed'))
       if (preference.matches || !('IntersectionObserver' in window)) return
-      observer = new IntersectionObserver(entries => {
+      const reveal = (entries: IntersectionObserverEntry[], currentObserver: IntersectionObserver) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             entry.target.classList.add('is-revealed')
-            observer?.unobserve(entry.target)
+            currentObserver.unobserve(entry.target)
           }
         })
-      }, { threshold: .1, rootMargin: '0px 0px -40px 0px' })
-      elements.forEach(element => { element.classList.add('reveal-ready'); observer?.observe(element) })
+      }
+      observer = new IntersectionObserver(reveal, { threshold: .1, rootMargin: '0px 0px -40px 0px' })
+      serviceObserver = new IntersectionObserver(reveal, { threshold: 0, rootMargin: '0px 0px -24px 0px' })
+      elements.forEach(element => {
+        element.classList.add('reveal-ready')
+        const currentObserver = element.closest('.services-section') ? serviceObserver : observer
+        currentObserver?.observe(element)
+      })
     }
     configure()
     preference.addEventListener('change', configure)
     return () => {
       observer?.disconnect()
+      serviceObserver?.disconnect()
       preference.removeEventListener('change', configure)
       elements.forEach(element => element.classList.remove('reveal-ready', 'is-revealed'))
     }
@@ -293,7 +304,7 @@ function App() {
   }
 
   const homeHref = (section: string) => isInnerPage ? `/#${section}` : `#${section}`
-  const contactHref = isDirectBillingPage || isPromosPage || isCareersPage ? '#contact' : isInnerPage ? '/#contact' : '#contact'
+  const contactHref = homeHref('contact')
   const nav = <>
     <a href={homeHref('home')} aria-current={!isInnerPage && activeSection === 'home' ? 'location' : undefined} onClick={() => setMenuOpen(false)}>HOME</a>
     <a href="/about" aria-current={isAboutPage ? 'page' : undefined} onClick={() => setMenuOpen(false)}>ABOUT</a>
@@ -394,15 +405,15 @@ function App() {
         </section>
 
         </>}
-        {!isSkinTreatmentPage && <section id="contact" className={`contact-section${isInnerPage ? ' about-contact' : ''}`} data-nav>
-          {isInnerPage ? <div className="contact-heading"><h2>Contact Us</h2></div> : <div className="contact-heading" data-reveal><h2 className="contact-kicker">YOUR NEXT VISIT</h2><h1>We’re here.</h1><p>For a question, a conversation,<br />or a little time for yourself.</p></div>}
+        {!isInnerPage && <section id="contact" className="contact-section" data-nav>
+          <div className="contact-heading" data-reveal><h2 className="contact-kicker">YOUR NEXT VISIT</h2><h1>We’re here.</h1><p>For a question, a conversation,<br />or a little time for yourself.</p></div>
           <div className="contact-grid">
             <div className="contact-info">
-              <h3>{isInnerPage ? 'Our Phone Number & Location' : 'Visit Mielle.'}</h3><p className="contact-intro">{isInnerPage ? 'We believe that wellness is more than a luxury, it’s a lifestyle. Step into Mielle Wellness and discover a space where beauty, healing, and tranquility come together in perfect harmony.' : 'Call us about a treatment or leave a message below. We’d love to hear from you.'}</p>
+              <h3>Visit Mielle.</h3><p className="contact-intro">Call us about a treatment or leave a message below. We’d love to hear from you.</p>
               <address><a className="contact-phone" href="tel:+18254078617">(825) 407-8617</a><a href={MAP} target="_blank" rel="noreferrer">Suite 134 - 1935 - 32 Ave. NE<br />Calgary, AB, T2E 7C8</a></address>
-              <div className="arrival-info"><a href={MAP} target="_blank" rel="noreferrer" className="map-link" aria-label="Open directions to Mielle Wellness in Google Maps"><img src={asset('map.png')} alt="Map showing the Mielle Wellness entrance at the back of the building off 32 Avenue NE" width="441" height="488" loading="lazy" /></a><p className="directions">{isInnerPage ? 'Enter through the back of the building where the huge parking lot is. Refer to the attached image below or call us if you have questions.' : 'Enter through the back of the building, by the large parking lot. Refer to the map or call us if you need a hand finding the entrance.'}</p></div>
+              <div className="arrival-info"><a href={MAP} target="_blank" rel="noreferrer" className="map-link" aria-label="Open directions to Mielle Wellness in Google Maps"><img src={asset('map.png')} alt="Map showing the Mielle Wellness entrance at the back of the building off 32 Avenue NE" width="441" height="488" loading="lazy" /></a><p className="directions">Enter through the back of the building, by the large parking lot. Refer to the map or call us if you need a hand finding the entrance.</p></div>
             </div>
-            <div className="contact-form-wrap"><h3>{isInnerPage ? 'Leave your message here' : 'Leave us a message.'}</h3>{!isInnerPage && <p className="form-intro">Tell us how we can help.</p>}
+            <div className="contact-form-wrap"><h3>Leave us a message.</h3><p className="form-intro">Tell us how we can help.</p>
               <form className="contact-form" onSubmit={sendMessage} onChange={clearMessageFeedback} aria-busy={messageSending}>
                 <label htmlFor="first-name">First name *<Input id="first-name" name="firstName" autoComplete="given-name" required maxLength={100} disabled={messageSending} /></label>
                 <label htmlFor="last-name">Last name<Input id="last-name" name="lastName" autoComplete="family-name" maxLength={100} disabled={messageSending} /></label>

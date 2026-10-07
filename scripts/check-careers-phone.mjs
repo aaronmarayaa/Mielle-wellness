@@ -94,6 +94,11 @@ try {
 
   for (const route of ['/', '/careers']) {
     await page.goto(`http://localhost:5173${route}`, { waitUntil: 'networkidle' })
+    if (route === '/careers') {
+      await expect(page.locator('#contact')).toHaveCount(0)
+      await page.locator('.footer-navigation').getByRole('link', { name: 'Contact', exact: true }).click()
+      await page.waitForURL('**/#contact')
+    }
     await page.locator('#first-name').fill('Email recipient test')
     await page.locator('#contact-email').fill('applicant@example.com')
     await page.locator('#message').fill('Testing the contact form recipient.')

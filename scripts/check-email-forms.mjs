@@ -26,16 +26,10 @@ await page.route('https://formsubmit.co/ajax/**', async route => {
   await route.fulfill({ json: { success: 'true', message: 'Form submitted successfully' } })
 })
 try {
-  for (const route of ['/', '/careers']) {
+  for (const route of ['/', '/#contact']) {
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 1000 })
       await page.goto(`http://localhost:5173${route}`, { waitUntil: 'networkidle' })
-      if (route === '/careers') {
-        const heading = page.locator('.about-contact .contact-heading h2')
-        await expect(heading).toHaveText('Contact Us')
-        const size = await heading.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
-        assert.ok(size >= 32 && size <= 60)
-      }
       const form = page.locator('.contact-form')
       await form.getByRole('button', { name: 'SEND', exact: true }).click()
       assert.equal(await form.evaluate(el => el.checkValidity()), false)

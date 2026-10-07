@@ -18,7 +18,6 @@ const layout = () => page.evaluate(() => ({
     start: el.getBoundingClientRect().top + scrollY,
     top: parseFloat(getComputedStyle(el).getPropertyValue('--stack-top')),
   })),
-  contact: document.querySelector('.about-contact').getBoundingClientRect().top + scrollY,
   footer: document.querySelector('.site-footer').getBoundingClientRect().top + scrollY,
 }))
 
@@ -66,13 +65,11 @@ try {
     await move(completedScroll)
     for (const progress of [.25, .5, 1]) {
       const start = positions.cards[2].start - positions.cards[2].top
-      const end = positions.contact - positions.header
+      const end = Math.min(positions.footer - positions.header, await page.evaluate(() => document.documentElement.scrollHeight - innerHeight))
       await move(start + (end - start) * progress)
       const herb = await page.locator('.about-difference').nth(2).evaluate(el => Number(getComputedStyle(el).getPropertyValue('--herb-progress')))
-      assert.ok(Math.abs(herb - progress) < .015)
+      assert.ok(Math.abs(herb - progress) < .015, JSON.stringify({ width, height, progress, herb, start, end, positions }))
     }
-    assert.equal(await page.evaluate(header => Boolean(document.elementFromPoint(innerWidth / 2, header + 6)?.closest('.about-contact')), positions.header), true)
-    if (width === 1440) await page.screenshot({ path: 'test-results/about-stack-contact-cover.png' })
     const footerStart = await page.locator('.site-footer').evaluate(el => el.getBoundingClientRect().top + scrollY)
     await move(footerStart - positions.header)
     const footerCoversStack = await page.locator('.site-footer').evaluate(el => {
@@ -84,7 +81,7 @@ try {
     assert.equal(footerCoversStack, true)
     if (width === 1440) await page.screenshot({ path: 'test-results/about-stack-footer-cover.png' })
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
-    evidence.push(`${width}x${height}: three pinned panels retain visible headings, ten scroll checkpoints fold/shrink herbs, reverse and paused scrolling are stable, contact and shared footer cover the stack, no overflow`)
+    evidence.push(`${width}x${height}: three pinned panels retain visible headings, ten scroll checkpoints fold/shrink herbs, reverse and paused scrolling are stable, final herb folds into the shared footer, no contact section or overflow`)
   }
 
   for (const [width, height] of [[320, 568], [375, 812], [768, 650], [1024, 600]]) {
@@ -110,7 +107,10 @@ try {
       assert.ok(reading.bottom <= height + 1 && reading.visible, JSON.stringify({ width, height, index, reading }))
     }
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
-    await page.locator('#contact').scrollIntoViewIfNeeded()
+    await expect(page.locator('#contact')).toHaveCount(0)
+    await page.locator('.footer-navigation').getByRole('link', { name: 'Contact', exact: true }).click()
+    await page.waitForURL('**/#contact')
+    await expect(page.locator('.contact-heading h1')).toBeInViewport()
     await page.getByRole('button', { name: 'SEND', exact: true }).click()
     assert.equal(await page.locator('#first-name').evaluate(el => el.validity.valueMissing), true)
     evidence.push(`${width}x${height}: panels remain sticky; taller panels scroll to their bottom before pinning, every paragraph is readable and Contact stays reachable`)
