@@ -2,16 +2,16 @@ import { Button } from './ui/button'
 
 const promotions = [
   {
-    id: 'coverage',
-    title: "DON'T LOSE YOUR COVERAGE",
+    id: 'thanksgiving',
+    title: 'THANKSGIVING DEALS',
     paragraphs: [
-      'Relax, recharge and use your coverage at Mielle Wellness clinic or at the comfort of your home. Your benefits won’t last forever so make the most of them before the year ends! Contact or visit us now to book your appointment.',
-      "Use it and don't lose it!",
+      'Celebrate Thanksgiving at Mielle Wellness with 10% off massage therapy, facial treatments and skin treatments.',
+      'Plus a free pumpkin pie from Pie Junkie YYC!',
     ],
-    image: 'promo-coverage.png',
-    width: 1254,
-    height: 1254,
-    alt: 'Mielle Wellness: use your benefits before they expire. Direct billing, mobile services and walk-in appointments. September to December.',
+    image: 'promo-thanksgiving.png',
+    width: 2080,
+    height: 2080,
+    alt: 'Mielle Wellness Thanksgiving Deals: 10% off massage therapy, facial treatments and skin treatments, plus a free pumpkin pie from Pie Junkie YYC.',
   },
   {
     id: 'seniors',

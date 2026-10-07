@@ -87,8 +87,8 @@ function ScrollOffer() {
       frame = 0
       const rect = home.getBoundingClientRect()
       const stageHeight = stage.offsetHeight
-      // Reserve the final stage height for the next section to cover the offer.
-      const travel = Math.max(rect.height - stageHeight * 2, 1)
+      // Reveal the offer before the next section starts covering the stage.
+      const travel = Math.max(rect.height - stageHeight - window.innerHeight, 1)
       const progress = Math.max(0, Math.min(1, -rect.top / travel))
 
       const revealStart = .05
@@ -393,7 +393,7 @@ function App() {
           </div>
         </section>
 
-        <section className="interior-section" aria-label="A calm treatment-room setting"><img src={asset('home-treatment-room.jpg')} alt="An amber-lit treatment room with a massage table, lamps and candles" width="6067" height="3467" loading="lazy" data-reveal /><p>A space to settle in.</p></section>
+        <section className="interior-section" aria-label="A calm treatment-room setting"><img src={asset('home-treatment-room.jpg')} alt="An amber-lit treatment room with a massage table, lamps and candles" width="6067" height="3467" loading="lazy" data-reveal /></section>
 
         <section id="reviews" className="reviews-section" aria-labelledby="reviews-title">
           <div className="reviews-top"><h2 id="reviews-title">WHAT CLIENTS SAY</h2><div className="review-controls">

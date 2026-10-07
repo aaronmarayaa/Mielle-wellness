@@ -37,14 +37,23 @@ try {
       }
       assert.ok(bounds.y + bounds.height <= height, `${width}x${height}: Home action stays inside viewport`)
     }
+    await page.mouse.wheel(0, 120)
+    await expect.poll(() => page.evaluate(() => Math.round(scrollY))).toBe(120)
+    await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
+    await page.mouse.wheel(0, 120)
+    await expect.poll(() => page.evaluate(() => Math.round(scrollY))).toBe(240)
+    assert.ok(await page.locator('#booking-options').evaluate(el => el.getBoundingClientRect().top >= innerHeight), 'Offer remains uncovered after two 120px scroll steps')
+    await page.mouse.wheel(0, 120)
+    await expect.poll(() => page.evaluate(() => Math.round(scrollY))).toBe(360)
+    assert.ok(await page.locator('#booking-options').evaluate(el => el.getBoundingClientRect().top < innerHeight), 'Three 120px scroll steps start the note overlap')
     const plateau = []
-    for (let distance = height * .3; distance <= height * 1.6; distance += height * .1) {
+    for (let distance = 60; distance <= 320; distance += 20) {
       await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), distance)
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
       if (await page.locator('.scroll-offer-content').evaluate(el => Number(getComputedStyle(el).opacity) === 1)) plateau.push(distance)
     }
     const hold = plateau.at(-1) - plateau[0]
-    assert.ok(hold >= height, `${width}px: offer should remain fully visible for at least one viewport of scrolling`)
+    assert.ok(hold >= 240 && hold <= 340, `${width}px: offer keeps a brief hold before the note stacks`)
     holds.push({ width, height, measuredFullVisibility: Math.round(hold) })
     await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), plateau[Math.floor(plateau.length / 2)])
     await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
@@ -63,7 +72,7 @@ try {
     await page.goBack({ waitUntil: 'networkidle' })
     await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), plateau[Math.floor(plateau.length / 2)])
     await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
-    if ([375, 1900].includes(width)) await page.screenshot({ path: `test-results/offer-longer-${width}.png` })
+    if ([375, 1900].includes(width)) await page.screenshot({ path: `test-results/offer-short-${width}.png` })
     const bookingTop = await page.locator('#booking-options').evaluate(el => scrollY + el.getBoundingClientRect().top)
     for (const progress of [0, .25, .5, .75]) {
       await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), bookingTop - height + height * progress)
@@ -117,8 +126,10 @@ try {
     await expect(page.locator('.scroll-offer-content')).toHaveCSS('opacity', '1')
     await expect.poll(() => page.locator('.home-stage').evaluate(el => el.inert)).toBe(false)
     await expect(page.locator('.site-header')).not.toHaveClass(/is-solid/)
-    await page.evaluate(() => scrollTo({ top: document.getElementById('home').offsetHeight - innerHeight + 1, behavior: 'instant' }))
-    await expect(page.locator('.scroll-offer')).not.toHaveClass(/is-visible/)
+    const releaseTop = await page.locator('#booking-options').evaluate(el => scrollY + el.getBoundingClientRect().top + 1)
+    await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), releaseTop)
+    await expect.poll(() => page.evaluate(() => Math.round(scrollY))).toBe(Math.round(releaseTop))
+    await expect(page.locator('.scroll-offer'), `${width}x${height}: offer is inaccessible after the note covers it`).not.toHaveClass(/is-visible/)
     await page.locator('#booking-options').scrollIntoViewIfNeeded()
     await expect(page.locator('#booking-options')).toBeInViewport()
     await menuIntro.evaluate(el => scrollTo({ top: scrollY + el.getBoundingClientRect().top - innerHeight - 40, behavior: 'instant' }))
@@ -135,12 +146,14 @@ try {
     await expect(page.locator('.service-image').first()).toHaveCSS('transition-duration', '0.24s')
     await expect.poll(() => video.evaluate(el => el.paused)).toBe(true)
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    await expect(page.locator('.interior-section > p')).toHaveCount(0)
+    assert.ok(await page.locator('.interior-section').evaluate(el => Math.abs(el.offsetHeight - el.querySelector('img').offsetHeight) <= 1), 'Room photograph has no caption strip')
     await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }))
     await expect.poll(() => video.evaluate(el => !el.paused)).toBe(true)
     if ([375, 1900].includes(width)) {
       await page.screenshot({ path: `test-results/home-1006-${width}.png` })
     }
-    evidence.push(`${width}x${height}: supplied video autoplays muted/inline, pauses offscreen and resumes on return; offer holds fully visible for ${Math.round(hold)}px with ${blur}, keyboard link opens /services; four checkpoints show A note from Mielle rising above the pinned, unfaded offer; covered offer becomes inert, navbar stays black, reverse restores offer; Treatment Menu visibly fades/slides on entry for 350ms/8px, with 400ms botanical fade and 240ms image hover; no overflow`)
+    evidence.push(`${width}x${height}: supplied video autoplays muted/inline, pauses offscreen and resumes on return; three 120px wheel steps start the note overlap, offer stays fully opaque with ${blur}, keyboard link opens /services; four checkpoints show A note from Mielle rising above the pinned offer; covered offer becomes inert, navbar stays black, reverse restores offer; Treatment Menu visibly fades/slides on entry for 350ms/8px, with 400ms botanical fade and 240ms image hover; no room-photo caption strip or overflow`)
   }
   await page.goto('http://localhost:5173', { waitUntil: 'networkidle' })
   const measurements = await page.evaluate(async () => {
@@ -183,7 +196,7 @@ try {
   await expect.poll(() => fallback.locator('img.hero-background').evaluate(el => el.complete && el.naturalWidth === 854)).toBe(true)
   await expect(fallback.locator('img.hero-background')).toHaveCSS('filter', 'none')
   await fallback.close()
-  evidence.push('New asset is byte-for-byte identical to supplied 1006.mp4; 17.368s loop restarts. Live/initial reduced motion and failed playback show the matching sharp still; reduced motion keeps the longer offer hold')
+  evidence.push('Video is byte-for-byte identical to supplied 1006.mp4; 17.368s loop restarts. Live/initial reduced motion and failed playback show the matching sharp still; reduced motion keeps the shorter offer sequence and visible content')
   assert.deepEqual(errors, [])
   await writeFile('test-results/home-video-offer-check.json', JSON.stringify({ evidence, holds, errors }, null, 2))
   console.log(evidence.join('\n'))

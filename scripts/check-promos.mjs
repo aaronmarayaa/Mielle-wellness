@@ -6,7 +6,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 await mkdir('test-results', { recursive: true })
 const browser = await chromium.launch({ channel: 'chrome' })
 const evidence = [], errors = []
-const headings = ["DON'T LOSE YOUR COVERAGE", 'COMPASSIONATE MASSAGE CARE FOR SENIORS', 'FIRST VISIT SPECIAL AT MIELLE WELLNESS']
+const headings = ['THANKSGIVING DEALS', 'COMPASSIONATE MASSAGE CARE FOR SENIORS', 'FIRST VISIT SPECIAL AT MIELLE WELLNESS']
 try {
   const page = await browser.newPage()
   await mockContact(page)
@@ -28,7 +28,9 @@ try {
     await expect(page.locator('.promotion h2')).toHaveText(headings)
     await expect(page.locator('.promotion-number')).toHaveText(['01', '02', '03'])
     await expect(page.locator('.promotion-copy > p')).toHaveCount(5)
-    await expect(page.locator('.promotion-copy')).toContainText(['Your benefits won’t last forever', 'Professional, caring and convenient', 'new clients receive 10% OFF their first visit'])
+    await expect(page.locator('.promotion-copy')).toContainText(['Plus a free pumpkin pie from Pie Junkie YYC!', 'Professional, caring and convenient', 'new clients receive 10% OFF their first visit'])
+    await expect(page.locator('.promotion-art img').first()).toHaveAttribute('src', '/assets/promo-thanksgiving.png')
+    await expect(page.locator('#promo-coverage')).toHaveCount(0)
     await page.evaluate(() => document.fonts.ready)
     const header = await page.locator('.site-header').boundingBox()
     const hero = await page.locator('.promos-hero').boundingBox()
@@ -38,6 +40,7 @@ try {
       const image = promotion.locator('img')
       await image.scrollIntoViewIfNeeded()
       await expect.poll(() => image.evaluate(el => el.complete && el.naturalWidth > 0)).toBe(true)
+      if (i === 0) assert.deepEqual(await image.evaluate(el => [el.naturalWidth, el.naturalHeight]), [2080, 2080])
       const imageBounds = await image.boundingBox(), copyBounds = await promotion.locator('.promotion-copy').boundingBox()
       if (width >= 1100 && i === 1) assert.ok(copyBounds.x >= imageBounds.x + imageBounds.width)
       else if (width >= 680) assert.ok(imageBounds.x >= copyBounds.x + copyBounds.width)
@@ -69,10 +72,15 @@ try {
   }
   await page.goto('http://localhost:5173/promos', { waitUntil: 'networkidle' })
   const artwork = page.locator('.promotion-art').first()
+  await artwork.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+  await expect(artwork).toHaveCSS('opacity', '1')
+  await expect(artwork).toHaveCSS('transform', 'none')
   await artwork.hover()
   await expect(artwork.locator('img')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, -6)')
   await page.mouse.move(0, 0)
   await expect(artwork.locator('img')).toHaveCSS('transform', 'none')
+  await page.locator('.promotion-booking').first().evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+  await expect(page.locator('.promotion-copy').first()).toHaveCSS('opacity', '1')
   await page.locator('.promotion-booking').first().hover()
   await expect(page.locator('.promotion-booking').first()).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, -2)')
   await page.mouse.move(0, 0)
